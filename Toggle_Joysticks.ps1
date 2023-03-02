@@ -34,7 +34,7 @@ function Test-Admin{
 
 
 
-Function Create-Config {
+Function Set-Config {
      $Options = [PSCustomObject]@{   
         DEMO = [PSCustomObject]@{ 
                 Name= "DEMO"
@@ -67,11 +67,11 @@ Function Create-Config {
 
 Function Get-Paths {
 
-    [System.Reflection.Assembly]::LoadWithPartialName(“System.windows.forms”) | Out-Null
+    Add-Type -AssemblyName System.Windows.Forms
 
     $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
     $OpenFileDialog.initialDirectory = $initialDirectory
-    $OpenFileDialog.filter = “All files (*.*)| *.*”
+    $OpenFileDialog.filter = ï¿½All files (*.*)| *.*ï¿½
     $OpenFileDialog.ShowDialog() | Out-Null
     $path = $OpenFileDialog.filename
 
@@ -107,7 +107,7 @@ Import-Module CredentialManager
 
 IF (!($Game) -and !($allOff) -and !($allOn)) {
     IF (!(Test-Path -Path $PSScriptRoot\Games.json)){
-        $Options = Create-Config
+        $Options = Set-Config
     } Else {Write-Warning "You already have a config file either run with -game <Name> or delete your config to start again"; exit}
 } Else {
     $Options = Get-Content -Path "$PSScriptRoot\games.json" -Raw | ConvertFrom-Json
@@ -136,7 +136,7 @@ IF ($Found) {
     }
 
     $Selections = foreach($item in $Options.$Game.Selections.PsObject.Properties) {
-        Add-Member -in $item.value -NotePropertyName 'name' -NotePropertyValue $item.name –PassThru
+        Add-Member -in $item.value -NotePropertyName 'name' -NotePropertyValue $item.name ï¿½PassThru
     }
     
     # Turn it all On
