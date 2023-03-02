@@ -5,6 +5,19 @@ param(
 [switch]$allOn
 )
 
+function Import-Xaml {
+    
+    Param(
+        [String]$xfile
+    )
+    [System.Reflection.Assembly]::LoadWithPartialName("PresentationFramework") | Out-Null
+	[xml]$xaml = Get-Content -Path $PSScriptRoot\$xfile
+	$manager = New-Object System.Xml.XmlNamespaceManager -ArgumentList $xaml.NameTable
+	$manager.AddNamespace("x", "http://schemas.microsoft.com/winfx/2006/xaml");
+	$xamlReader = New-Object System.Xml.XmlNodeReader $xaml
+	[Windows.Markup.XamlReader]::Load($xamlReader)
+}
+
 function Test-Admin{
     Param(
     [String]$myScript,
@@ -35,7 +48,13 @@ function Test-Admin{
 
 
 Function Set-Config {
-     $Options = [PSCustomObject]@{   
+    #joysticks
+    $MFG = "USB\VID_16D0&PID_0A38\MFG500002"
+    $SGF = "USB\VID_231D&PID_0127\6&5d99159&1&2"
+    $MCGU = "USB\VID_231D&PID_0125\6&5d99159&1&1"
+    $Hog = "USB\VID_044F&PID_0404\5&178ad4e8&0&8"
+    # Create Demo Config
+    $Options = [PSCustomObject]@{   
         DEMO = [PSCustomObject]@{ 
                 Name= "DEMO"
                 Path = 'E:\Games Standalone\DEMO\Demo.exe'
@@ -71,7 +90,7 @@ Function Get-Paths {
 
     $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
     $OpenFileDialog.initialDirectory = $initialDirectory
-    $OpenFileDialog.filter = �All files (*.*)| *.*�
+    $OpenFileDialog.filter = "All files (*.*)| *.*"
     $OpenFileDialog.ShowDialog() | Out-Null
     $path = $OpenFileDialog.filename
 
@@ -80,10 +99,12 @@ Function Get-Paths {
         
     }
     $Settings | ConvertTo-Json | Out-File -FilePath "$PSScriptRoot\Settings.json"
+
+    # Return
     $Settings
 }
 
-#Paths etc
+#Get some Settings
 
 $path = "$PSScriptRoot\USBDeview.exe"
 IF (!(Test-Path -Path $path)) {
@@ -97,18 +118,25 @@ IF (!(Test-Path -Path $path)) {
 
 }
 
-#joysticks
-$MFG = "USB\VID_16D0&PID_0A38\MFG500002"
-$SGF = "USB\VID_231D&PID_0127\6&5d99159&1&2"
-$MCGU = "USB\VID_231D&PID_0125\6&5d99159&1&1"
-$Hog = "USB\VID_044F&PID_0404\5&178ad4e8&0&8"
-
+# Import the Credential Manager this allows us to save some credentials so that the elevated window can launch the game as your standard user.
 Import-Module CredentialManager
 
 IF (!($Game) -and !($allOff) -and !($allOn)) {
     IF (!(Test-Path -Path $PSScriptRoot\Games.json)){
         $Options = Set-Config
-    } Else {Write-Warning "You already have a config file either run with -game <Name> or delete your config to start again"; exit}
+    } Else {
+        $Window = Import-Xaml "Main.xaml"
+        $Button = $Window.FindName('ButRSI')
+        $Button.Add_Click({
+            $Script:Game = "RSI"
+        })
+        $Window.ShowDialog() | Out-Null
+        IF ($Game) {
+            $Options = Get-Content -Path "$PSScriptRoot\games.json" -Raw | ConvertFrom-Json
+        } Else {
+            Write-Warning "You already have a config file either run with -game <Name> or delete your config to start again"; exit
+        }
+    }
 } Else {
     $Options = Get-Content -Path "$PSScriptRoot\games.json" -Raw | ConvertFrom-Json
 }
@@ -136,7 +164,7 @@ IF ($Found) {
     }
 
     $Selections = foreach($item in $Options.$Game.Selections.PsObject.Properties) {
-        Add-Member -in $item.value -NotePropertyName 'name' -NotePropertyValue $item.name �PassThru
+        Add-Member -in $item.value -NotePropertyName 'name' -NotePropertyValue $item.name -PassThru
     }
     
     # Turn it all On
