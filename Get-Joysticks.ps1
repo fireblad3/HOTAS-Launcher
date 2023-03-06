@@ -33,11 +33,10 @@ $listBox.Location = New-Object System.Drawing.Point(10,40)
 $listBox.Size = New-Object System.Drawing.Size(260,80)
 $listBox.Height = 100
 $Options = @(Get-Content -Path "$PSScriptRoot\games.json" -Raw | ConvertFrom-Json)
-$sticks = foreach($item in $Options.DCS.Selections.PsObject.Properties) {
+$sticks = foreach($item in $Options.DEMO.Selections.PsObject.Properties) {
         Add-Member -in $item.value -NotePropertyName 'name' -NotePropertyValue $item.name –PassThru
     }
 Foreach ($stick in $sticks ) {
-    Write-host $stick
     [void] $listBox.Items.Add($stick)
 }
 

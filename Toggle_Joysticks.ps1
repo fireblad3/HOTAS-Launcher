@@ -129,6 +129,7 @@ IF (!($Game) -and !($allOff) -and !($allOn)) {
         $Button = $Window.FindName('ButRSI')
         $Button.Add_Click({
             $Script:Game = "RSI"
+            $window.Close()
         })
         $Window.ShowDialog() | Out-Null
         IF ($Game) {
@@ -179,30 +180,33 @@ IF ($Found) {
     IF ($Game -ne 'DEMO') {
         IF ($Options.$Game.Path2){
         Write-Host "Starting Aux app 1"
-            Start-Process -FilePath $Options.$Game.Path2 -Credential $Creds
+            $App1 = Start-Process -FilePath $Options.$Game.Path2 -PassThru
         }
         IF ($Options.$Game.Path3){
         Write-Host "Starting Aux app 2"
-            Start-Process -FilePath $Options.$Game.Path3 -Credential $Creds
+            $App2 = Start-Process -FilePath $Options.$Game.Path3 -Credential $Creds -PassThru
         }
         IF ($Options.$Game.Path4){
         Write-Host "Starting Aux app 3"
-            Start-Process -FilePath $Options.$Game.Path4 -Credential $Creds
+            $App3 = Start-Process -FilePath $Options.$Game.Path4 -Credential $Creds -PassThru
         }
         IF ($Options.$Game.Path5){
         Write-Host "Starting Aux app 4"
-            Start-Process -FilePath $Options.$Game.Path5 -Credential $Creds
+            $App4 = Start-Process -FilePath $Options.$Game.Path5 -Credential $Creds -PassThru
         }
 
         Write-Host "Starting $Game"
         Start-Process -FilePath $Options.$Game.Path -Wait -Credential $Creds
-        Read-Host "Any Key to quit"
     }
 
     #Turn it all off
     IF ($allOn -ne $true) {
         ForEach ($Selection in $Selections) {
             Start-Process -FilePath $Path -ArgumentList "/RunAsAdmin /Disable $Selection"
+            IF ($App1) {Stop-Process -InputObject $App1}
+            IF ($App1) {Stop-Process -InputObject $App2}
+            IF ($App1) {Stop-Process -InputObject $App3}
+            IF ($App1) {Stop-Process -InputObject $App4}
         }
     }
     
