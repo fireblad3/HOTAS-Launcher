@@ -1,0 +1,106 @@
+[
+  {
+    "Name": " VKBsim Gunfighter MCG Ultimate Twist ",
+    "ID": "USB\\VID_231D&PID_0125\\5&178AD4E8&0&8"
+  },
+  {
+    "Name": "ButtKicker PRO",
+    "ID": "USB\\VID_33A1&PID_52DA\\5&178AD4E8&0&10"
+  },
+  {
+    "Name": "C922 Pro Stream Webcam",
+    "ID": "USB\\VID_046D&PID_085C&MI_00\\6&1C345357&3&0000"
+  },
+  {
+    "Name": "LianLi-UNI FAN-AL-v1.7 ",
+    "ID": "USB\\VID_0CF2&PID_A101&MI_01\\7&15CCE670&3&0001"
+  },
+  {
+    "Name": "LianLi-UNI FAN-AL-v1.7 ",
+    "ID": "USB\\VID_0CF2&PID_A101\\6243168001"
+  },
+  {
+    "Name": "Samson Meteor Mic",
+    "ID": "USB\\VID_17A0&PID_0310\\5&178AD4E8&0&7"
+  },
+  {
+    "Name": "USB Receiver",
+    "ID": "USB\\VID_046D&PID_C539&MI_02\\6&C7E6041&0&0002"
+  },
+  {
+    "Name": "USB Receiver",
+    "ID": "USB\\VID_046D&PID_C539&MI_01\\6&C7E6041&0&0001"
+  },
+  {
+    "Name": "USB Receiver",
+    "ID": "USB\\VID_046D&PID_C539\\5&178AD4E8&0&6"
+  },
+  {
+    "Name": "USB Receiver",
+    "ID": "USB\\VID_046D&PID_C539&MI_00\\6&C7E6041&0&0000"
+  },
+  {
+    "Name": "Samson Meteor Mic",
+    "ID": "USB\\VID_17A0&PID_0310&MI_03\\6&21113CAA&0&0003"
+  },
+  {
+    "Name": "ITE Device",
+    "ID": "USB\\VID_048D&PID_5702\\5&178AD4E8&0&13"
+  },
+  {
+    "Name": "USB Receiver",
+    "ID": "USB\\VID_046D&PID_C53D\\5&178AD4E8&0&5"
+  },
+  {
+    "Name": "C922 Pro Stream Webcam",
+    "ID": "USB\\VID_046D&PID_085C&MI_02\\6&1C345357&3&0002"
+  },
+  {
+    "Name": "USB Receiver",
+    "ID": "USB\\VID_046D&PID_C53D&MI_00\\6&292721E5&0&0000"
+  },
+  {
+    "Name": "USB Audio",
+    "ID": "USB\\VID_0414&PID_A00E\\5&178AD4E8&0&2"
+  },
+  {
+    "Name": "USB Audio",
+    "ID": "USB\\VID_0414&PID_A00E&MI_07\\6&FA17DDC&0&0007"
+  },
+  {
+    "Name": "ButtKicker PRO",
+    "ID": "USB\\VID_33A1&PID_52DA&MI_02\\6&1ADC40AD&0&0002"
+  },
+  {
+    "Name": "USB Receiver",
+    "ID": "USB\\VID_046D&PID_C53D&MI_01\\6&292721E5&0&0001"
+  },
+  {
+    "Name": "Samson Meteor Mic",
+    "ID": "USB\\VID_17A0&PID_0310&MI_00\\6&21113CAA&0&0000"
+  },
+  {
+    "Name": "Throttle - HOTAS Warthog",
+    "ID": "USB\\VID_044F&PID_0404\\6&5D99159&1&1"
+  },
+  {
+    "Name": null,
+    "ID": "USB\\VID_8087&PID_0029\\5&178AD4E8&0&14"
+  },
+  {
+    "Name": "C922 Pro Stream Webcam",
+    "ID": "USB\\VID_046D&PID_085C\\FFAD8F8F"
+  },
+  {
+    "Name": " VKBsim Space Gunfighter L ",
+    "ID": "USB\\VID_231D&PID_0127\\6&5D99159&1&2"
+  },
+  {
+    "Name": "LianLi-UNI FAN-AL-v1.7 ",
+    "ID": "USB\\VID_0CF2&PID_A101&MI_00\\7&15CCE670&3&0000"
+  },
+  {
+    "Name": "USB Receiver",
+    "ID": "USB\\VID_046D&PID_C53D&MI_02\\6&292721E5&0&0002"
+  }
+]
