@@ -196,7 +196,7 @@ IF ($Found) {
         }
 
         Write-Host "Starting $Game"
-        Start-Process -FilePath $Options.$Game.Path -Wait -Credential $Creds
+        Start-Process -FilePath $Options.$Game.Path -ArgumentList $Options.$Game.Arg1 -Wait -Credential $Creds
     }
 
     #Turn it all off
