@@ -3,7 +3,8 @@ $output = Get-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -match '^USB
 
 $output = $output | Where-Object {$_.FriendlyName -notmatch 'Hub' -and $_.FriendlyName -notmatch 'Audio' -and $_.FriendlyName -notmatch 'Receiver'  -and $_.FriendlyName -notmatch 'ButtKicker'}
 
-$Output | Format-Table
+$output = $output | Where-Object {$_.Class -notmatch 'Image' -and $_.Class -notmatch 'Media' -and $_.Class -notmatch 'Bluetooth' -and $_.Class -notmatch 'DiskDrive' -and $_.Class -notmatch 'USBDevice'}
+#$Output | Format-Table
 $Sticks = @()
 
 foreach ($stick in $output) {
@@ -24,5 +25,4 @@ foreach ($stick in $output) {
     $StickName = $null
 
 }
-#$Sticks | Format-Table
 $Sticks | ConvertTo-Json -Depth 6 | Out-File -FilePath "$PSScriptRoot\joysticks.json"

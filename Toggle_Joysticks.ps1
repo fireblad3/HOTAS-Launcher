@@ -24,28 +24,30 @@ function Test-Admin{
     [String]$elevated,
     [String]$Game,
     [switch]$allOff,
-    [switch]$allOn
+    [switch]$allOn,
+    [switch]$test
     ) 
     $currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
-    $currentUser = $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
-    IF ($currentUser -ne $true) {
-        if ($elevated) {
-            Write-Warning -Message "tried to elevate, did not work, aborting"
-        } else {
-            If ($allOff) {
-                $Scriptpath =  "& '" + $myScript + "' -elevated -Game $Game -allOff" ; Start-Process powershell -Verb runAs -ArgumentList "$Scriptpath" ; exit
+    $Admin = $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
+    #$currentUser
+    IF ($Admin -ne $true) {
+        IF ($test -eq $false) {
+            if ($elevated) {
+                Write-Warning -Message "tried to elevate, did not work, aborting"
+            } else {
+                If ($allOff) {
+                    $Scriptpath =  "& '" + $myScript + "' -elevated -Game $Game -allOff" ; Start-Process powershell -Verb runAs -ArgumentList "$Scriptpath" ; exit
+                }
+                If ($allOn) {
+                    $Scriptpath =  "& '" + $myScript + "' -elevated -Game $Game -allOn" ; Start-Process powershell -Verb runAs -ArgumentList "$Scriptpath" ; exit
+                }
+                Write-Host "Launching As Admin"
+                $Scriptpath =  "& '" + $myScript + "' -elevated -Game $Game" ; Start-Process powershell -Verb runAs -ArgumentList "$Scriptpath" ; exit
             }
-            If ($allOn) {
-                $Scriptpath =  "& '" + $myScript + "' -elevated -Game $Game -allOn" ; Start-Process powershell -Verb runAs -ArgumentList "$Scriptpath" ; exit
-            }
-            $Scriptpath =  "& '" + $myScript + "' -elevated -Game $Game" ; Start-Process powershell -Verb runAs -ArgumentList "$Scriptpath" ; exit
         }
-        Exit
     }
-   
+    $Admin
 }
-
-
 
 Function Set-Config {
     #joysticks
@@ -103,23 +105,56 @@ Function Get-Paths {
     # Return
     $Settings
 }
+Function Get-Joysticks {
+    $output = Get-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -match '^USB'} 
+
+
+    $output = $output | Where-Object {$_.FriendlyName -notmatch 'Hub' -and $_.FriendlyName -notmatch 'Audio' -and $_.FriendlyName -notmatch 'Receiver'  -and $_.FriendlyName -notmatch 'ButtKicker'}
+
+    $output = $output | Where-Object {$_.Class -notmatch 'Image' -and $_.Class -notmatch 'Media' -and $_.Class -notmatch 'Bluetooth' -and $_.Class -notmatch 'DiskDrive' -and $_.Class -notmatch 'USBDevice'}
+    #$Output | Format-Table
+    $Sticks = @()
+
+    foreach ($stick in $output) {
+
+        $stickId = $stick.InstanceId
+        $Details = Get-PnpDeviceProperty -InstanceId $StickID
+        foreach ($detail in $Details) {
+            if ($detail.keyname -eq 'DEVPKEY_Device_BusReportedDeviceDesc') {
+                $StickName = $detail.Data
+            }
+        }
+
+        $sticks += [PSCustomObject]@{
+            Name = $stickName
+            ID = $stickId
+        }
+        $stickId = $null
+        $StickName = $null
+
+    }
+    $Sticks | ConvertTo-Json -Depth 6 | Out-File -FilePath "$PSScriptRoot\joysticks.json"
+}
 
 #Get some Settings
 
+
+
 $path = "$PSScriptRoot\USBDeview.exe"
 IF (!(Test-Path -Path $path)) {
-    IF (Test-Path -Path "$PSScriptRoot\settings.json") {
-        $settings = Get-Content -Path "$PSScriptRoot\settings.json" -Raw | ConvertFrom-Json
-        $path = $Settings.usbdview
-    } Else {
-        $Settings = Get-Paths
-        $path = $Settings.usbdview
-    }
+IF (Test-Path -Path "$PSScriptRoot\settings.json") {
+    $settings = Get-Content -Path "$PSScriptRoot\settings.json" -Raw | ConvertFrom-Json
+    $path = $Settings.usbdview
+} Else {
+    $Settings = Get-Paths
+    $path = $Settings.usbdview
+}
 
 }
 
 # Import the Credential Manager this allows us to save some credentials so that the elevated window can launch the game as your standard user.
 Import-Module CredentialManager
+$Joysticks = Get-Content -Path "$PSScriptRoot\Joysticks.json" -Raw | ConvertFrom-Json
 
 IF (!($Game) -and !($allOff) -and !($allOn)) {
     IF (!(Test-Path -Path $PSScriptRoot\Games.json)){
@@ -153,6 +188,14 @@ IF ($Found) {
         $Creds = (Get-StoredCredential -Target "GameLauncher")
     }
 
+    #Update Joysticks.json on first launch
+    IF (Test-Admin -test) {
+        #we are running as admin
+    } Else {
+        #Not running as admin so lets update Joysticks
+        Get-Joysticks
+    }
+
     $myScript = $myinvocation.mycommand.definition
     IF ($allOff) {
         Test-Admin -MyScript "$Myscript" -Game "$Game" -allOff
@@ -168,10 +211,17 @@ IF ($Found) {
         Add-Member -in $item.value -NotePropertyName 'name' -NotePropertyValue $item.name -PassThru
     }
     
+
+    
+    
+    
     # Turn it all On
     IF ($allOff -ne $true) {
         ForEach ($Selection in $Selections) {
-            Start-Process -FilePath $Path -ArgumentList "/RunAsAdmin /enable $Selection"
+            $Stick = $Joysticks | Where-Object {$_.Name -eq $Selection}
+            $SelectedStick = $Stick.ID
+            Write-Host $Stick.ID
+            Start-Process -FilePath $Path -ArgumentList "/RunAsAdmin /enable $SelectedStick"
             Timeout /T 5
         }
     }
@@ -201,12 +251,16 @@ IF ($Found) {
         } Else {
             Start-Process -FilePath $Options.$Game.Path -Wait -Credential $Creds
         }
+        Read-Host "Press Any Key to Finish"
     }
 
     #Turn it all off
     IF ($allOn -ne $true) {
         ForEach ($Selection in $Selections) {
-            Start-Process -FilePath $Path -ArgumentList "/RunAsAdmin /Disable $Selection"
+            $Stick = $Joysticks | Where-Object {$_.Name -eq $Selection}
+            $SelectedStick = $Stick.ID
+            Write-Host $Stick.ID
+            Start-Process -FilePath $Path -ArgumentList "/RunAsAdmin /Disable $SelectedStick"
             IF ($App1) {Stop-Process -InputObject $App1}
             IF ($App1) {Stop-Process -InputObject $App2}
             IF ($App1) {Stop-Process -InputObject $App3}

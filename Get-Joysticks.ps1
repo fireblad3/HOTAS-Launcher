@@ -2,22 +2,26 @@
 Add-Type -AssemblyName System.Drawing
 
 $form = New-Object System.Windows.Forms.Form
-$form.Text = 'Select a Computer'
-$form.Size = New-Object System.Drawing.Size(300,200)
+$form.Text = 'Select a Joystick'
+$form.Size = New-Object System.Drawing.Size(500,500)
 $form.StartPosition = 'CenterScreen'
 
 $okButton = New-Object System.Windows.Forms.Button
-$okButton.Location = New-Object System.Drawing.Point(75,120)
+$okButton.Location = New-Object System.Drawing.Point(75,425)
 $okButton.Size = New-Object System.Drawing.Size(75,23)
-$okButton.Text = 'OK'
-$okButton.DialogResult = [System.Windows.Forms.DialogResult]::OK
+$okButton.Text = 'Copy'
+#$okButton.DialogResult = [System.Windows.Forms.DialogResult]::OK
+$okButton.Add_Click{
+    $x = $listBox.SelectedItem
+    Set-Clipboard -Value "$x"
+}
 $form.AcceptButton = $okButton
 $form.Controls.Add($okButton)
 
 $cancelButton = New-Object System.Windows.Forms.Button
-$cancelButton.Location = New-Object System.Drawing.Point(150,120)
+$cancelButton.Location = New-Object System.Drawing.Point(150,425)
 $cancelButton.Size = New-Object System.Drawing.Size(75,23)
-$cancelButton.Text = 'Cancel'
+$cancelButton.Text = 'Close'
 $cancelButton.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
 $form.CancelButton = $cancelButton
 $form.Controls.Add($cancelButton)
@@ -25,18 +29,25 @@ $form.Controls.Add($cancelButton)
 $label = New-Object System.Windows.Forms.Label
 $label.Location = New-Object System.Drawing.Point(10,20)
 $label.Size = New-Object System.Drawing.Size(280,20)
-$label.Text = 'Please select a computer:'
+$label.Text = 'Please select a joystick and click copy:'
 $form.Controls.Add($label)
 
 $listBox = New-Object System.Windows.Forms.ListBox
 $listBox.Location = New-Object System.Drawing.Point(10,40)
-$listBox.Size = New-Object System.Drawing.Size(260,80)
-$listBox.Height = 100
-$Options = @(Get-Content -Path "$PSScriptRoot\games.json" -Raw | ConvertFrom-Json)
-$sticks = foreach($item in $Options.DEMO.Selections.PsObject.Properties) {
-        Add-Member -in $item.value -NotePropertyName 'name' -NotePropertyValue $item.name –PassThru
+$listBox.Size = New-Object System.Drawing.Size(400,350)
+#$listBox.Height = 100
+
+
+$Options = @(Get-Content -Path "$PSScriptRoot\joysticks.json" -Raw | ConvertFrom-Json)
+$sticks = foreach($item in $Options){ #} $Options.PsObject.Properties) {
+        $Item.Name
+        #Add-Member -in $item.value -NotePropertyName 'Name' -NotePropertyValue $item.Name –PassThru
     }
+
+
 Foreach ($stick in $sticks ) {
+    #$stick = $stick -replace '\\', '\\'
+    #$stick = $stick -replace "&","\u0026"
     [void] $listBox.Items.Add($stick)
 }
 
@@ -46,8 +57,6 @@ $form.Topmost = $true
 
 $result = $form.ShowDialog()
 
-if ($result -eq [System.Windows.Forms.DialogResult]::OK)
-{
-    $x = $listBox.SelectedItem
-    $x
+if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
+
 } 
