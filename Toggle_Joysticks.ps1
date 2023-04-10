@@ -196,7 +196,11 @@ IF ($Found) {
         }
 
         Write-Host "Starting $Game"
-        Start-Process -FilePath $Options.$Game.Path -ArgumentList $Options.$Game.Arg1 -Wait -Credential $Creds
+        IF ($Options.$Game.arg1) {
+            Start-Process -FilePath $Options.$Game.Path -ArgumentList $Options.$Game.Arg1 -Wait -Credential $Creds
+        } Else {
+            Start-Process -FilePath $Options.$Game.Path -Wait -Credential $Creds
+        }
     }
 
     #Turn it all off
