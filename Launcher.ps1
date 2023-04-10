@@ -51,12 +51,13 @@ function Test-Admin{
 }
 
 Function Set-Config {
-    #joysticks
-    $MFG = "USB\VID_16D0&PID_0A38\MFG500002"
-    $SGF = "USB\VID_231D&PID_0127\6&5d99159&1&2"
-    $MCGU = "USB\VID_231D&PID_0125\6&5d99159&1&1"
-    $Hog = "USB\VID_044F&PID_0404\5&178ad4e8&0&8"
-    # Create Demo Config
+
+    # Create Config
+    $Stick1 = Get-Joystick $Joysticks
+    $Stick2 = Get-Joystick $Joysticks
+    $Stick3 = Get-Joystick $Joysticks
+    $Stick4 = Get-Joystick $Joysticks
+
     $Options = [PSCustomObject]@{   
         DEMO = [PSCustomObject]@{ 
                 Name= "DEMO"
@@ -66,10 +67,10 @@ Function Set-Config {
                 Path4 = 'C:\Program Files (x86)\SimShaker\SimShaker for Aviators Beta\SimShaker for Aviators Beta.exe'
                 Path5 = 'C:\Program Files (x86)\SimShaker\SimShaker for Aviators Beta\SimShaker for Aviators Beta.exe'
                 Selections = [PSCustomObject]@{
-                    MCGU=$MCGU
-                    SGF=$SGF
-                    Hog=$Hog
-                    MFG=$MFG
+                    Stick1=$Stick1
+                    Stick2=$Stick2
+                    Stick3=$Stick3
+                    Stick4=$Stick4
                 }
         }
            
@@ -135,6 +136,72 @@ Function Get-Joysticks {
 
     }
     $Sticks
+}
+
+Function Get-Joystick {
+    param(
+        $Joysticks
+    )
+    Add-Type -AssemblyName System.Windows.Forms
+    Add-Type -AssemblyName System.Drawing
+
+    $form = New-Object System.Windows.Forms.Form
+    $form.Text = 'Select a Joystick'
+    $form.Size = New-Object System.Drawing.Size(500,500)
+    $form.StartPosition = 'CenterScreen'
+
+    $okButton = New-Object System.Windows.Forms.Button
+    $okButton.Location = New-Object System.Drawing.Point(75,425)
+    $okButton.Size = New-Object System.Drawing.Size(75,23)
+    $okButton.Text = 'Add'
+    $okButton.DialogResult = [System.Windows.Forms.DialogResult]::OK
+    $okButton.Add_Click{
+        $x = $listBox.SelectedItem
+    }
+    $form.AcceptButton = $okButton
+    $form.Controls.Add($okButton)
+
+    $cancelButton = New-Object System.Windows.Forms.Button
+    $cancelButton.Location = New-Object System.Drawing.Point(150,425)
+    $cancelButton.Size = New-Object System.Drawing.Size(75,23)
+    $cancelButton.Text = 'Close'
+    $cancelButton.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+    $form.CancelButton = $cancelButton
+    $form.Controls.Add($cancelButton)
+
+    $label = New-Object System.Windows.Forms.Label
+    $label.Location = New-Object System.Drawing.Point(10,20)
+    $label.Size = New-Object System.Drawing.Size(280,20)
+    $label.Text = 'Please select a joystick and click copy:'
+    $form.Controls.Add($label)
+
+    $listBox = New-Object System.Windows.Forms.ListBox
+    $listBox.Location = New-Object System.Drawing.Point(10,40)
+    $listBox.Size = New-Object System.Drawing.Size(400,350)
+
+
+
+
+    $sticks = foreach($item in $Joysticks){
+            $Item.Name
+            #Add-Member -in $item.value -NotePropertyName 'Name' -NotePropertyValue $item.Name –PassThru
+        }
+
+
+    Foreach ($stick in $sticks ) {
+        [void] $listBox.Items.Add($stick)
+    }
+
+    $form.Controls.Add($listBox)
+
+    $form.Topmost = $true
+
+    $result = $form.ShowDialog()
+
+    if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
+        
+    } 
+    $x
 }
 
 Function Start-Game {

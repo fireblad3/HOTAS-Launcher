@@ -13,7 +13,6 @@ $okButton.Text = 'Copy'
 #$okButton.DialogResult = [System.Windows.Forms.DialogResult]::OK
 $okButton.Add_Click{
     $x = $listBox.SelectedItem
-    Set-Clipboard -Value "$x"
 }
 $form.AcceptButton = $okButton
 $form.Controls.Add($okButton)
@@ -35,19 +34,17 @@ $form.Controls.Add($label)
 $listBox = New-Object System.Windows.Forms.ListBox
 $listBox.Location = New-Object System.Drawing.Point(10,40)
 $listBox.Size = New-Object System.Drawing.Size(400,350)
-#$listBox.Height = 100
 
 
-$Options = @(Get-Content -Path "$PSScriptRoot\joysticks.json" -Raw | ConvertFrom-Json)
-$sticks = foreach($item in $Options){ #} $Options.PsObject.Properties) {
+
+
+$sticks = foreach($item in $Joysticks){
         $Item.Name
         #Add-Member -in $item.value -NotePropertyName 'Name' -NotePropertyValue $item.Name –PassThru
     }
 
 
 Foreach ($stick in $sticks ) {
-    #$stick = $stick -replace '\\', '\\'
-    #$stick = $stick -replace "&","\u0026"
     [void] $listBox.Items.Add($stick)
 }
 
@@ -58,5 +55,5 @@ $form.Topmost = $true
 $result = $form.ShowDialog()
 
 if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
-
+    $x
 } 
