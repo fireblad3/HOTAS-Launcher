@@ -156,7 +156,7 @@ Function Get-Joystick {
     $okButton.Text = 'Add'
     $okButton.DialogResult = [System.Windows.Forms.DialogResult]::OK
     $okButton.Add_Click{
-        $x = $listBox.SelectedItem
+        $Script:x = $listBox.SelectedItem
     }
     $form.AcceptButton = $okButton
     $form.Controls.Add($okButton)
@@ -199,9 +199,11 @@ Function Get-Joystick {
     $result = $form.ShowDialog()
 
     if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
-        
-    } 
-    $x
+        $x
+    } Else {
+        $false
+    }
+    
 }
 
 Function Start-Game {
