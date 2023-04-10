@@ -6,8 +6,9 @@
         Background="black"
 >
 <StackPanel> 
-    <Button Content="RSI" x:Name="ButRSI" Height="34" Width="150"/>
-    <Button Content="Fetch Sticks" x:Name="ButFetchSticks" Height="34" Width="150"/>
+    <ComboBox x:Name="ComboGame" Margin="5" Height="50" Width="150"></ComboBox>
+    
+    <Button Content="Launch" x:Name="Button1" Height="50" Width="150"/>
 </StackPanel>
 
 </Window>

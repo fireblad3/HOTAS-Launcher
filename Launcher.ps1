@@ -1,9 +1,9 @@
 param(
-[String]$Game,
-[switch]$Elevated,
-[switch]$allOff,
-[switch]$allOn
+[switch]$Elevated
 )
+
+# Import the Credential Manager this allows us to save some credentials so that the elevated window can launch the game as your standard user.
+Import-Module CredentialManager
 
 function Import-Xaml {
     
@@ -17,6 +17,7 @@ function Import-Xaml {
 	$xamlReader = New-Object System.Xml.XmlNodeReader $xaml
 	[Windows.Markup.XamlReader]::Load($xamlReader)
 }
+
 
 function Test-Admin{
     Param(
@@ -86,7 +87,7 @@ Function Set-Config {
     $Options
 }
 
-Function Get-Paths {
+Function Set-Settings {
 
     Add-Type -AssemblyName System.Windows.Forms
 
@@ -133,87 +134,21 @@ Function Get-Joysticks {
         $StickName = $null
 
     }
-    $Sticks | ConvertTo-Json -Depth 6 | Out-File -FilePath "$PSScriptRoot\joysticks.json"
+    $Sticks
 }
 
-#Get some Settings
-
-
-
-$path = "$PSScriptRoot\USBDeview.exe"
-IF (!(Test-Path -Path $path)) {
-IF (Test-Path -Path "$PSScriptRoot\settings.json") {
-    $settings = Get-Content -Path "$PSScriptRoot\settings.json" -Raw | ConvertFrom-Json
-    $path = $Settings.usbdview
-} Else {
-    $Settings = Get-Paths
-    $path = $Settings.usbdview
-}
-
-}
-
-# Import the Credential Manager this allows us to save some credentials so that the elevated window can launch the game as your standard user.
-Import-Module CredentialManager
-$Joysticks = Get-Content -Path "$PSScriptRoot\Joysticks.json" -Raw | ConvertFrom-Json
-
-IF (!($Game) -and !($allOff) -and !($allOn)) {
-    IF (!(Test-Path -Path $PSScriptRoot\Games.json)){
-        $Options = Set-Config
-    } Else {
-        $Window = Import-Xaml "Main.xaml"
-        $Button1 = $Window.FindName('Button1')
-        $Button1.Add_Click({
-            $Script:Game = "iRacing"
-            $window.Close()
-        })
-        $Window.ShowDialog() | Out-Null
-        IF ($Game) {
-            $Options = Get-Content -Path "$PSScriptRoot\games.json" -Raw | ConvertFrom-Json
-        } Else {
-            Write-Warning "You already have a config file either run with -game <Name> or delete your config to start again"; exit
-        }
-    }
-} Else {
-    $Options = Get-Content -Path "$PSScriptRoot\games.json" -Raw | ConvertFrom-Json
-}
-
-Foreach ($G in $Options.$Game){
-    IF ($G.Name -eq $Game) {$Found = $true}
-}
-IF ($Found) {
-    $Creds = (Get-StoredCredential -Target "GameLauncher")
-    If (!(Get-StoredCredential -Target "GameLauncher")){
-        Write-Warning -Message "Credentials don't exist, prompting user"
-        $Creds = Get-Credential -Message "Enter your windows username and Password to run the game" | New-StoredCredential -Target "GameLauncher" -Type Generic -Persist Enterprise
-        $Creds = (Get-StoredCredential -Target "GameLauncher")
-    }
-
-    #Update Joysticks.json on first launch
-    IF (Test-Admin -test) {
-        #we are running as admin
-    } Else {
-        #Not running as admin so lets update Joysticks
-        Get-Joysticks
-    }
-
-    $myScript = $myinvocation.mycommand.definition
-    IF ($allOff) {
-        Test-Admin -MyScript "$Myscript" -Game "$Game" -allOff
-    }
-    IF ($allOn) {
-        Test-Admin -MyScript "$Myscript" -Game "$Game" -allOn
-    }
-    IF ($allOn -ne $true -and $alloff -ne $true) {
-        Test-Admin -MyScript "$Myscript" -Game "$Game"
-    }
+Function Start-Game {
+    param(
+        [String]$Game,
+        [switch]$allOff,
+        [switch]$allOn,
+        $Options,
+        $Joysticks
+    )
 
     $Selections = foreach($item in $Options.$Game.Selections.PsObject.Properties) {
         Add-Member -in $item.value -NotePropertyName 'name' -NotePropertyValue $item.name -PassThru
     }
-    
-
-    
-    
     
     # Turn it all On
     IF ($allOff -ne $true) {
@@ -267,7 +202,58 @@ IF ($Found) {
             IF ($App1) {Stop-Process -InputObject $App4}
         }
     }
-    
-} Else {
-    Write-Host "A Game with that name was not found in your config file"
 }
+
+#Initial Setup
+
+#Get Credentials or set them if needed
+$Creds = (Get-StoredCredential -Target "GameLauncher")
+If (!(Get-StoredCredential -Target "GameLauncher")){
+    Write-Warning -Message "Credentials don't exist, prompting user"
+    $Creds = Get-Credential -Message "Enter your windows username and Password to run the game" | New-StoredCredential -Target "GameLauncher" -Type Generic -Persist Enterprise
+    $Creds = (Get-StoredCredential -Target "GameLauncher")
+}
+
+# Check that we are running as admin and restart if we aren't
+$myScript = $myinvocation.mycommand.definition
+$null = Test-Admin -MyScript "$Myscript"
+
+
+$SettingsPath = "$PSScriptRoot\settings.json"
+
+IF (Test-Path -Path "$SettingsPath") {
+    $settings = Get-Content -Path "$SettingsPath" -Raw | ConvertFrom-Json
+    $path = $Settings.usbdview
+} Else {
+    $Settings = Set-Settings
+    $path = $Settings.usbdview
+}
+
+
+#Get the Joysticks now.
+$Joysticks = @(Get-Joysticks)
+
+# Get The Games
+IF (!(Test-Path -Path $PSScriptRoot\Games.json)){
+    $Options = Set-Config
+} 
+$Options = Get-Content -Path "$PSScriptRoot\games.json" -Raw | ConvertFrom-Json
+
+$Games = foreach($G in $Options.PsObject.Properties){
+    $G.Name
+}
+
+#Create the Window
+
+$Window = Import-Xaml "Main.xaml"
+
+($Window.FindName('ComboGame')).ItemsSource = $Games
+
+
+$Button1 = $Window.FindName('Button1')
+$Button1.Add_Click({
+   $Game = ($Window.FindName('ComboGame')).SelectedItem
+    Start-Game -Game $Game -Options $Options -Joysticks $Joysticks
+})
+$Window.ShowDialog() | Out-Null
+
