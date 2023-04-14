@@ -11,7 +11,7 @@ function Import-Xaml {
         [String]$xfile
     )
     [System.Reflection.Assembly]::LoadWithPartialName("PresentationFramework") | Out-Null
-	[xml]$xaml = Get-Content -Path $PSScriptRoot\$xfile
+	[xml]$xaml = Get-Content -Path $psScriptRoot\$xfile
 	$manager = New-Object System.Xml.XmlNamespaceManager -ArgumentList $xaml.NameTable
 	$manager.AddNamespace("x", "http://schemas.microsoft.com/winfx/2006/xaml");
 	$xamlReader = New-Object System.Xml.XmlNodeReader $xaml
@@ -84,7 +84,7 @@ Function Set-Config {
             } 
         } 
     }
-    $Options | ConvertTo-Json | Out-File -FilePath "$PSScriptRoot\Games.json"
+    $Options | ConvertTo-Json | Out-File -FilePath "$env:APPDATA\DBLauncher\Games.json"
     $Options
 }
 
@@ -102,7 +102,7 @@ Function Set-Settings {
         usbdview = $path
         
     }
-    $Settings | ConvertTo-Json | Out-File -FilePath "$PSScriptRoot\Settings.json"
+    $Settings | ConvertTo-Json | Out-File -FilePath "$env:APPDATA\DBLauncher\Settings.json"
 
     # Return
     $Settings
@@ -265,10 +265,10 @@ Function Start-Game {
             $SelectedStick = $Stick.ID
             Write-Host $Stick.ID
             Start-Process -FilePath $Path -ArgumentList "/RunAsAdmin /Disable $SelectedStick"
-            IF ($App1) {Stop-Process -InputObject $App1}
-            IF ($App1) {Stop-Process -InputObject $App2}
-            IF ($App1) {Stop-Process -InputObject $App3}
-            IF ($App1) {Stop-Process -InputObject $App4}
+            IF ($App1) {$null = Stop-Process -InputObject $App1}
+            IF ($App1) {$null = Stop-Process -InputObject $App2}
+            IF ($App1) {$null = Stop-Process -InputObject $App3}
+            IF ($App1) {$null = Stop-Process -InputObject $App4}
         }
     }
 }
@@ -287,8 +287,10 @@ If (!(Get-StoredCredential -Target "GameLauncher")){
 $myScript = $myinvocation.mycommand.definition
 $null = Test-Admin -MyScript "$Myscript"
 
-
-$SettingsPath = "$PSScriptRoot\settings.json"
+If (!(Test-Path -Path $env:APPDATA\DBLauncher)) {
+    mkdir $env:APPDATA\DBLauncher
+}
+$SettingsPath = "$env:APPDATA\DBLauncher\settings.json"
 
 IF (Test-Path -Path "$SettingsPath") {
     $settings = Get-Content -Path "$SettingsPath" -Raw | ConvertFrom-Json
@@ -303,10 +305,10 @@ IF (Test-Path -Path "$SettingsPath") {
 $Joysticks = @(Get-Joysticks)
 
 # Get The Games
-IF (!(Test-Path -Path $PSScriptRoot\Games.json)){
+IF (!(Test-Path -Path $env:APPDATA\DBLauncher\Games.json)){
     $Options = Set-Config
 } 
-$Options = Get-Content -Path "$PSScriptRoot\games.json" -Raw | ConvertFrom-Json
+$Options = Get-Content -Path "$env:APPDATA\DBLauncher\games.json" -Raw | ConvertFrom-Json
 
 $Games = foreach($G in $Options.PsObject.Properties){
     $G.Name
@@ -325,4 +327,4 @@ $Button1.Add_Click({
     Start-Game -Game $Game -Options $Options -Joysticks $Joysticks
 })
 $Window.ShowDialog() | Out-Null
-
+Read-Host
