@@ -214,7 +214,9 @@ Function Start-Game {
     )
 
     $Selections = foreach($item in $Options.$Game.Selections.PsObject.Properties) {
-        Add-Member -in $item.value -NotePropertyName 'name' -NotePropertyValue $item.name -PassThru
+        IF ($Null -ne $item.value -and $item.value -ne $False){
+            Add-Member -in $item.value -NotePropertyName 'name' -NotePropertyValue $item.name -PassThru
+        }
     }
     
     # Turn it all On
@@ -230,28 +232,28 @@ Function Start-Game {
     # Start the Game
     IF ($Game) {
         IF ($Game -ne 'DEMO') {
-            IF ($Options.$Game.Path2){
+            IF ($Options.$Game.AppPath1){
             Write-Host "Starting Aux app 1"
-                $Script:App1 = Start-Process -FilePath $Options.$Game.Path2 -PassThru
+                $Script:App1 = Start-Process -FilePath $Options.$Game.AppPath1 -PassThru
             }
-            IF ($Options.$Game.Path3){
+            IF ($Options.$Game.AppPath2){
             Write-Host "Starting Aux app 2"
-                $Script:App2 = Start-Process -FilePath $Options.$Game.Path3 -Credential $Creds -PassThru
+                $Script:App2 = Start-Process -FilePath $Options.$Game.AppPath2 -Credential $Creds -PassThru
             }
-            IF ($Options.$Game.Path4){
+            IF ($Options.$Game.AppPath3){
             Write-Host "Starting Aux app 3"
-                $Script:App3 = Start-Process -FilePath $Options.$Game.Path4 -Credential $Creds -PassThru
+                $Script:App3 = Start-Process -FilePath $Options.$Game.AppPath3 -Credential $Creds -PassThru
             }
-            IF ($Options.$Game.Path5){
+            IF ($Options.$Game.AppPath4){
             Write-Host "Starting Aux app 4"
-                $Script:App4 = Start-Process -FilePath $Options.$Game.Path5 -Credential $Creds -PassThru
+                $Script:App4 = Start-Process -FilePath $Options.$Game.AppPath4 -Credential $Creds -PassThru
             }
 
             Write-Host "Starting $Game"
             IF ($Options.$Game.arg1) {
-                Start-Process -FilePath $Options.$Game.Path -ArgumentList $Options.$Game.Arg1 -Credential $Creds
+                Start-Process -FilePath $Options.$Game.GamePath -ArgumentList $Options.$Game.Arg1 -Credential $Creds
             } Else {
-                Start-Process -FilePath $Options.$Game.Path -Wait -Credential $Creds
+                Start-Process -FilePath $Options.$Game.GamePath -Wait -Credential $Creds
             }
         }
     }
@@ -264,32 +266,32 @@ Function Stop-Game {
         $Joysticks
     )
     $Selections = foreach($item in $Options.$Game.Selections.PsObject.Properties) {
-        Add-Member -in $item.value -NotePropertyName 'name' -NotePropertyValue $item.name -PassThru
+        IF ($Null -ne $item.value -and $item.value -ne $False){
+            Add-Member -in $item.value -NotePropertyName 'name' -NotePropertyValue $item.name -PassThru
+        }
     }
     #Turn it all off
-    IF ($allOn -ne $true) {
-        ForEach ($Selection in $Selections) {
-            $Stick = $Joysticks | Where-Object {$_.Name -eq $Selection}
-            $SelectedStick = $Stick.ID
-            Write-Host $Stick.ID
-            Start-Process -FilePath $Path -ArgumentList "/RunAsAdmin /Disable $SelectedStick"
-        }
-        IF ($App1) {
-            $null = Stop-Process -InputObject $App1
-            $Script:App1 = $false
-        }
-        IF ($App2) {
-            $null = Stop-Process -InputObject $App2
-            $Script:App2 = $false
-        }
-        IF ($App3) {
-            $null = Stop-Process -InputObject $App3
-            $Script:App3 = $false
-        }
-        IF ($App4) {
-            $null = Stop-Process -InputObject $App4
-            $Script:App4 = $false
-        }
+    ForEach ($Selection in $Selections) {
+        $Stick = $Joysticks | Where-Object {$_.Name -eq $Selection}
+        $SelectedStick = $Stick.ID
+        Write-Host $Stick.ID
+        Start-Process -FilePath $Path -ArgumentList "/RunAsAdmin /Disable $SelectedStick"
+    }
+    IF ($App1) {
+        $null = Stop-Process -InputObject $App1
+        $Script:App1 = $false
+    }
+    IF ($App2) {
+        $null = Stop-Process -InputObject $App2
+        $Script:App2 = $false
+    }
+    IF ($App3) {
+        $null = Stop-Process -InputObject $App3
+        $Script:App3 = $false
+    }
+    IF ($App4) {
+        $null = Stop-Process -InputObject $App4
+        $Script:App4 = $false
     }
 }
 
@@ -330,7 +332,7 @@ IF (!(Test-Path -Path $env:APPDATA\DBLauncher\Games.json)){
 } 
 $Options = Get-Content -Path "$env:APPDATA\DBLauncher\games.json" -Raw | ConvertFrom-Json
 
-$Games = foreach($G in $Options.PsObject.Properties){
+$Script:Games = foreach($G in $Options.PsObject.Properties){
     $G.Name
 }
 
@@ -338,12 +340,15 @@ $Games = foreach($G in $Options.PsObject.Properties){
 
 $Window = Import-Xaml "Main.xaml"
 
-($Window.FindName('ComboGame')).ItemsSource = $Games
 
+$ComboGame = $Window.FindName('ComboGame')
+$ComboGame.ItemsSource = $Games
+#($Window.FindName('ComboGame')).ItemsSource = $Games
 
 $Button1 = $Window.FindName('Button1')
 $Button1.Add_Click({
-   $Game = ($Window.FindName('ComboGame')).SelectedItem
+   #$Game = ($Window.FindName('ComboGame')).SelectedItem
+   $Game = $ComboGame.SelectedItem
     Start-Game -Game $Game -Options $Options -Joysticks $Joysticks
 })
 
@@ -351,5 +356,104 @@ $Button2 = $Window.FindName('Button2')
 $Button2.Add_Click({
    $Game = ($Window.FindName('ComboGame')).SelectedItem
     Stop-Game -Game $Game -Options $Options -Joysticks $Joysticks
+})
+
+$stackEdit = $Window.FindName('stackEdit')
+$stackEdit.Visibility = "Collapsed"
+
+$txtGameName = $Window.FindName('txtGameName')
+$txtGamePath = $Window.FindName('txtGamePath')
+$txtAppPath1 = $Window.FindName('txtAppPath1')
+$txtAppPath2 = $Window.FindName('txtAppPath2')
+$txtAppPath3 = $Window.FindName('txtAppPath3')
+$txtAppPath4 = $Window.FindName('txtAppPath4')
+$lblJoy1 = $Window.FindName('lblJoy1')
+$lblJoy2 = $Window.FindName('lblJoy2')
+$lblJoy3 = $Window.FindName('lblJoy3')
+$lblJoy4 = $Window.FindName('lblJoy4')
+$txtGameArgs = $Window.FindName('txtGameArgs')
+
+$Button8 = $Window.FindName('Button8')
+$Button8.Add_Click({
+    $lblJoy1.Content = Get-Joystick -Joysticks $Joysticks
+})
+$Button9 = $Window.FindName('Button9')
+$Button9.Add_Click({
+    $lblJoy2.Content = Get-Joystick -Joysticks $Joysticks
+})
+$Button10 = $Window.FindName('Button10')
+$Button10.Add_Click({
+    $lblJoy3.Content = Get-Joystick -Joysticks $Joysticks
+})
+$Button11 = $Window.FindName('Button11')
+$Button11.Add_Click({
+    $lblJoy4.Content = Get-Joystick -Joysticks $Joysticks
+})
+
+$Button12 = $Window.FindName('Button12')
+$Button12.Add_Click({
+    $stackEdit.Visibility= "Collapsed"
+    $SelectedGame = ($Window.FindName('ComboGame')).SelectedItem
+    
+    if ($SelectedGame -ne $txtGameName.Text) {
+        $Options.psobject.properties.remove($SelectedGame)
+    } 
+
+    $GameObject = [PSCustomObject]@{
+        Name = $txtGameName.Text
+        GamePath = $txtGamePath.Text
+        AppPath1 = $txtAppPath1.Text
+        AppPath2 = $txtAppPath2.Text
+        AppPath3 = $txtAppPath3.Text
+        AppPath4 = $txtAppPath4.Text
+        Arg1 = $txtGameArgs.Text
+        Selections = [PSCustomObject]@{
+            Stick1=$lblJoy1.Content
+            Stick2=$lblJoy2.Content
+            Stick3=$lblJoy3.Content
+            Stick4=$lblJoy4.Content
+        }
+    }
+    Add-Member -InputObject $Options -MemberType NoteProperty -Name $txtGameName.Text -Value $GameObject
+    $Options | ConvertTo-Json | Out-File -FilePath "$env:APPDATA\DBLauncher\Games.json"
+    
+    $Script:Games = foreach($G in $Options.PsObject.Properties){
+        $G.Name
+    }
+    $ComboGame.ItemsSource = $Games
+    
+})
+
+$btnCancel = $Window.FindName('btnCancel')
+$btnCancel.Add_Click({
+    $stackEdit.Visibility= "Collapsed"
+})
+
+$btnNewGame = $Window.FindName('btnNewGame')
+$btnNewGame.Add_Click({
+    $Script:Games = foreach($G in $Options.PsObject.Properties){
+        $G.Name
+    }
+    $ComboGame.ItemsSource = $Games
+    $stackEdit.Visibility = "Visible"
+})
+
+$Button13 = $Window.FindName('Button13')
+$Button13.Add_Click({
+    $stackEdit.Visibility = "Visible"
+    $Game = ($Window.FindName('ComboGame')).SelectedItem
+    
+    $txtGameName.Text = $Options.$Game.Name
+    $txtGamePath.Text = $Options.$Game.GamePath
+    $txtAppPath1.Text = $Options.$Game.AppPath1
+    $txtAppPath2.Text = $Options.$Game.AppPath2
+    $txtAppPath3.Text = $Options.$Game.AppPath3
+    $txtAppPath4.Text = $Options.$Game.AppPath4
+    $txtGameArgs.Text = $Options.$Game.Arg1
+    $lblJoy1.Content = $Options.$Game.Selections.Stick1
+    $lblJoy2.Content = $Options.$Game.Selections.Stick2
+    $lblJoy3.Content = $Options.$Game.Selections.Stick3
+    $lblJoy4.Content = $Options.$Game.Selections.Stick4
+    
 })
 $Window.ShowDialog() | Out-Null
