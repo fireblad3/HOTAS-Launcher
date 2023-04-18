@@ -43,7 +43,7 @@ function Test-Admin{
                     $Scriptpath =  "& '" + $myScript + "' -elevated -Game $Game -allOn" ; Start-Process powershell -Verb runAs -ArgumentList "$Scriptpath" ; exit
                 }
                 Write-Host "Launching As Admin"
-                $Scriptpath =  "& '" + $myScript + "' -elevated -Game $Game" ; Start-Process powershell -Verb runAs -ArgumentList "$Scriptpath" ; exit
+                $Scriptpath =  "& '" + $myScript + "' -elevated" ; Start-Process powershell -Verb runAs -ArgumentList "$Scriptpath" ; exit
             }
         }
     }
@@ -209,8 +209,6 @@ Function Get-Joystick {
 Function Start-Game {
     param(
         [String]$Game,
-        [switch]$allOff,
-        [switch]$allOn,
         $Options,
         $Joysticks
     )
@@ -220,44 +218,54 @@ Function Start-Game {
     }
     
     # Turn it all On
-    IF ($allOff -ne $true) {
-        ForEach ($Selection in $Selections) {
-            $Stick = $Joysticks | Where-Object {$_.Name -eq $Selection}
-            $SelectedStick = $Stick.ID
-            Write-Host $Stick.ID
-            Start-Process -FilePath $Path -ArgumentList "/RunAsAdmin /enable $SelectedStick"
-            Timeout /T 5
-        }
+    ForEach ($Selection in $Selections) {
+        $Stick = $Joysticks | Where-Object {$_.Name -eq $Selection}
+        $SelectedStick = $Stick.ID
+        Write-Host $Stick.ID
+        Start-Process -FilePath $Path -ArgumentList "/RunAsAdmin /enable $SelectedStick"
+        Timeout /T 5
     }
+
     
     # Start the Game
-    IF ($Game -ne 'DEMO') {
-        IF ($Options.$Game.Path2){
-        Write-Host "Starting Aux app 1"
-            $App1 = Start-Process -FilePath $Options.$Game.Path2 -PassThru
-        }
-        IF ($Options.$Game.Path3){
-        Write-Host "Starting Aux app 2"
-            $App2 = Start-Process -FilePath $Options.$Game.Path3 -Credential $Creds -PassThru
-        }
-        IF ($Options.$Game.Path4){
-        Write-Host "Starting Aux app 3"
-            $App3 = Start-Process -FilePath $Options.$Game.Path4 -Credential $Creds -PassThru
-        }
-        IF ($Options.$Game.Path5){
-        Write-Host "Starting Aux app 4"
-            $App4 = Start-Process -FilePath $Options.$Game.Path5 -Credential $Creds -PassThru
-        }
+    IF ($Game) {
+        IF ($Game -ne 'DEMO') {
+            IF ($Options.$Game.Path2){
+            Write-Host "Starting Aux app 1"
+                $Script:App1 = Start-Process -FilePath $Options.$Game.Path2 -PassThru
+            }
+            IF ($Options.$Game.Path3){
+            Write-Host "Starting Aux app 2"
+                $Script:App2 = Start-Process -FilePath $Options.$Game.Path3 -Credential $Creds -PassThru
+            }
+            IF ($Options.$Game.Path4){
+            Write-Host "Starting Aux app 3"
+                $Script:App3 = Start-Process -FilePath $Options.$Game.Path4 -Credential $Creds -PassThru
+            }
+            IF ($Options.$Game.Path5){
+            Write-Host "Starting Aux app 4"
+                $Script:App4 = Start-Process -FilePath $Options.$Game.Path5 -Credential $Creds -PassThru
+            }
 
-        Write-Host "Starting $Game"
-        IF ($Options.$Game.arg1) {
-            Start-Process -FilePath $Options.$Game.Path -ArgumentList $Options.$Game.Arg1 -Wait -Credential $Creds
-        } Else {
-            Start-Process -FilePath $Options.$Game.Path -Wait -Credential $Creds
+            Write-Host "Starting $Game"
+            IF ($Options.$Game.arg1) {
+                Start-Process -FilePath $Options.$Game.Path -ArgumentList $Options.$Game.Arg1 -Credential $Creds
+            } Else {
+                Start-Process -FilePath $Options.$Game.Path -Wait -Credential $Creds
+            }
         }
-        Read-Host "Press Any Key to Finish"
     }
+}
 
+Function Stop-Game {
+    param(
+        [String]$Game,
+        $Options,
+        $Joysticks
+    )
+    $Selections = foreach($item in $Options.$Game.Selections.PsObject.Properties) {
+        Add-Member -in $item.value -NotePropertyName 'name' -NotePropertyValue $item.name -PassThru
+    }
     #Turn it all off
     IF ($allOn -ne $true) {
         ForEach ($Selection in $Selections) {
@@ -265,10 +273,22 @@ Function Start-Game {
             $SelectedStick = $Stick.ID
             Write-Host $Stick.ID
             Start-Process -FilePath $Path -ArgumentList "/RunAsAdmin /Disable $SelectedStick"
-            IF ($App1) {$null = Stop-Process -InputObject $App1}
-            IF ($App1) {$null = Stop-Process -InputObject $App2}
-            IF ($App1) {$null = Stop-Process -InputObject $App3}
-            IF ($App1) {$null = Stop-Process -InputObject $App4}
+        }
+        IF ($App1) {
+            $null = Stop-Process -InputObject $App1
+            $Script:App1 = $false
+        }
+        IF ($App2) {
+            $null = Stop-Process -InputObject $App2
+            $Script:App2 = $false
+        }
+        IF ($App3) {
+            $null = Stop-Process -InputObject $App3
+            $Script:App3 = $false
+        }
+        IF ($App4) {
+            $null = Stop-Process -InputObject $App4
+            $Script:App4 = $false
         }
     }
 }
@@ -326,5 +346,10 @@ $Button1.Add_Click({
    $Game = ($Window.FindName('ComboGame')).SelectedItem
     Start-Game -Game $Game -Options $Options -Joysticks $Joysticks
 })
+
+$Button2 = $Window.FindName('Button2')
+$Button2.Add_Click({
+   $Game = ($Window.FindName('ComboGame')).SelectedItem
+    Stop-Game -Game $Game -Options $Options -Joysticks $Joysticks
+})
 $Window.ShowDialog() | Out-Null
-Read-Host
