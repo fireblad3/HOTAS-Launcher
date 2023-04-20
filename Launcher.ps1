@@ -82,12 +82,27 @@ Function Get-FilePath {
     $Path
 }
 Function Set-Settings {
-
-    $path = Get-FilePath
+    
+    $Download = Show-Message -Message "Would you like to downlaod usbdview automatically from https://www.nirsoft.net/utils/ ?" -Question
+    IF ($download -eq 'Yes') {
+        Try {
+            $url = "https://www.nirsoft.net/utils/usbdeview-x64.zip"
+            Invoke-WebRequest $url -OutFile $MyAppData\usbdeview-x64.zip
+            Expand-Archive -Path $MyAppData\usbdeview-x64.zip -DestinationPath $MyAppData\usbdeview-x64
+            Remove-Item -Path $MyAppData\usbdeview-x64.zip
+            $path = "$MyAppData\usbdeView-x64\usbdeview.exe"
+        } Catch {
+            Show-Message -Message "Download Failed, Please Download usbdview from https://www.nirsoft.net/utils/ and select USBDeview.exe in the next window"
+            $path = Get-FilePath
+        }
+    } Else {
+        Show-Message -Message "Please Download usbdview from https://www.nirsoft.net/utils/ and select USBDeview.exe in the next window"
+        $path = Get-FilePath
+    }
 
     $Settings = [PSCustomObject]@{
         usbdview = $path
-        
+        lastGame = $false
     }
     $Settings | ConvertTo-Json | Out-File -FilePath "$MyAppData\Settings.json"
 
