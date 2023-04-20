@@ -6,7 +6,7 @@
         MinHeight="300"
         MinWidth="300"
 >
-<StackPanel Margin="10">
+<StackPanel>
     <StackPanel x:Name="stackCombo" Orientation="Vertical" HorizontalAlignment="Center">
         <StackPanel Margin="10" Orientation="Horizontal" HorizontalAlignment="Center">
             <ComboBox x:Name="ComboGame" Margin="10" Height="25" Width="200" Padding="3"></ComboBox>
@@ -100,7 +100,9 @@
             <Button x:Name="btnCancelEdit" Content="Cancel Edit" Height="25" Width="110" Margin="5"/>
         </StackPanel>
     </StackPanel>
-
+    <StackPanel Margin="5" VerticalAlignment="Bottom" HorizontalAlignment="Left">
+        <Label Width="200" Height="25" Padding="3" Margin="5">Copyright, Daniel Bailey 2023</Label>
+    </StackPanel>
 </StackPanel>
 
 </Window>
