@@ -18,7 +18,6 @@ function Import-Xaml {
 	[Windows.Markup.XamlReader]::Load($xamlReader)
 }
 
-
 function Test-Admin{
     Param(
     [String]$myScript,
@@ -90,39 +89,65 @@ Function Set-Settings {
         usbdview = $path
         
     }
-    $Settings | ConvertTo-Json | Out-File -FilePath "$env:APPDATA\DBLauncher\Settings.json"
+    $Settings | ConvertTo-Json | Out-File -FilePath "$MyAppData\Settings.json"
 
     # Return
     $Settings
 }
 Function Get-Joysticks {
-    $output = Get-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -match '^USB'} 
+    
+    $SplashPnpDevice = Import-Xaml "SplashPnpDevice.xaml"
+    $SplashPnpDevice.Add_ContentRendered({
+        $output = Get-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -match '^USB'}
+        $output = $output | Where-Object {$_.FriendlyName -notmatch 'Hub'  } 
+        #$output = $output | Where-Object {$_.FriendlyName -notmatch 'USB Audio'}
+       
+        #$output = $output | Where-Object {$_.FriendlyName -notmatch 'Receiver'}
+        #$output = $output | Where-Object {$_.FriendlyName -notmatch 'ButtKicker'}
+        #$output = $output | Where-Object {$_.FriendlyName -notmatch 'USB Receiver'}
 
-
-    $output = $output | Where-Object {$_.FriendlyName -notmatch 'Hub' -and $_.FriendlyName -notmatch 'Audio' -and $_.FriendlyName -notmatch 'Receiver'  -and $_.FriendlyName -notmatch 'ButtKicker'}
-
-    $output = $output | Where-Object {$_.Class -notmatch 'Image' -and $_.Class -notmatch 'Media' -and $_.Class -notmatch 'Bluetooth' -and $_.Class -notmatch 'DiskDrive' -and $_.Class -notmatch 'USBDevice'}
-    #$Output | Format-Table
-    $Sticks = @()
-
-    foreach ($stick in $output) {
-
-        $stickId = $stick.InstanceId
-        $Details = Get-PnpDeviceProperty -InstanceId $StickID
-        foreach ($detail in $Details) {
-            if ($detail.keyname -eq 'DEVPKEY_Device_BusReportedDeviceDesc') {
-                $StickName = $detail.Data
+        $output = $output | Where-Object {$_.Class -notmatch 'Image' -and $_.Class -notmatch 'Media' -and $_.Class -notmatch 'Bluetooth' -and $_.Class -notmatch 'DiskDrive' -and $_.Class -notmatch 'USBDevice'}
+        $Script:Sticks = @()
+        $filter = @(
+                'Receiver',
+                'LianLi',
+                'USB',
+                'ITE Device',
+                'ButtKicker',
+                'Mic',
+                'WebCam'
+            )
+        foreach ($stick in $output) {
+            $filterMatch = $false
+            $stickId = $stick.InstanceId
+            $Details = Get-PnpDeviceProperty -InstanceId $StickID
+            foreach ($detail in $Details) {
+                if ($detail.keyname -eq 'DEVPKEY_Device_BusReportedDeviceDesc') {
+                    $StickName = $detail.Data
+                }
             }
-        }
+            
+            foreach ($i in $filter) {
+                if ($StickName -match $i){
+                    $filterMatch = $true
+                }
+            }
+            IF (!($filterMatch)) {
+                $Script:Sticks += [PSCustomObject]@{
+                    Name = $stickName
+                    ID = $stickId
+                }
+            }
+            
+            $stickId = $null
+            $StickName = $null
 
-        $sticks += [PSCustomObject]@{
-            Name = $stickName
-            ID = $stickId
         }
-        $stickId = $null
-        $StickName = $null
-
-    }
+        
+        $SplashPnpDevice.Close()
+    })
+    
+    $SplashPnpDevice.ShowDialog() | Out-Null
     $Sticks
 }
 
@@ -201,50 +226,57 @@ Function Start-Game {
         $Joysticks
     )
 
-    $Selections = foreach($item in $Options.$Game.Selections.PsObject.Properties) {
-        IF ($Null -ne $item.value -and $item.value -ne $False){
-            Add-Member -in $item.value -NotePropertyName 'name' -NotePropertyValue $item.name -PassThru
-        }
-    }
+    $Splash = Import-Xaml "Splash.xaml"
+    $Splash.Add_ContentRendered({    
+        
     
-    # Turn it all On
-    ForEach ($Selection in $Selections) {
-        $Stick = $Joysticks | Where-Object {$_.Name -eq $Selection}
-        $SelectedStick = $Stick.ID
-        Write-Host $Stick.ID
-        Start-Process -FilePath $Path -ArgumentList "/RunAsAdmin /enable $SelectedStick"
-        Timeout /T 5
-    }
-
-    
-    # Start the Game
-    IF ($Game) {
-        IF ($Game -ne 'DEMO') {
-            IF ($Options.$Game.AppPath1){
-            Write-Host "Starting Aux app 1"
-                $Script:App1 = Start-Process -FilePath $Options.$Game.AppPath1 -PassThru
-            }
-            IF ($Options.$Game.AppPath2){
-            Write-Host "Starting Aux app 2"
-                $Script:App2 = Start-Process -FilePath $Options.$Game.AppPath2 -Credential $Creds -PassThru
-            }
-            IF ($Options.$Game.AppPath3){
-            Write-Host "Starting Aux app 3"
-                $Script:App3 = Start-Process -FilePath $Options.$Game.AppPath3 -Credential $Creds -PassThru
-            }
-            IF ($Options.$Game.AppPath4){
-            Write-Host "Starting Aux app 4"
-                $Script:App4 = Start-Process -FilePath $Options.$Game.AppPath4 -Credential $Creds -PassThru
-            }
-
-            Write-Host "Starting $Game"
-            IF ($Options.$Game.arg1) {
-                Start-Process -FilePath $Options.$Game.GamePath -ArgumentList $Options.$Game.Arg1 -Credential $Creds
-            } Else {
-                Start-Process -FilePath $Options.$Game.GamePath -Wait -Credential $Creds
+        $Selections = foreach($item in $Options.$Game.Selections.PsObject.Properties) {
+            IF ($Null -ne $item.value -and $item.value -ne $False){
+                Add-Member -in $item.value -NotePropertyName 'name' -NotePropertyValue $item.name -PassThru
             }
         }
-    }
+        
+        # Turn it all On
+        ForEach ($Selection in $Selections) {
+            $Stick = $Joysticks | Where-Object {$_.Name -eq $Selection}
+            $SelectedStick = $Stick.ID
+            Write-Host $Stick.ID
+            Start-Process -FilePath $Path -ArgumentList "/RunAsAdmin /enable $SelectedStick"
+            Timeout /T 5
+        }
+
+        
+        # Start the Game
+        IF ($Game) {
+            IF ($Game -ne 'DEMO') {
+                IF ($Options.$Game.AppPath1){
+                Write-Host "Starting Aux app 1"
+                    $Script:App1 = Start-Process -FilePath $Options.$Game.AppPath1 -PassThru
+                }
+                IF ($Options.$Game.AppPath2){
+                Write-Host "Starting Aux app 2"
+                    $Script:App2 = Start-Process -FilePath $Options.$Game.AppPath2 -Credential $Creds -PassThru
+                }
+                IF ($Options.$Game.AppPath3){
+                Write-Host "Starting Aux app 3"
+                    $Script:App3 = Start-Process -FilePath $Options.$Game.AppPath3 -Credential $Creds -PassThru
+                }
+                IF ($Options.$Game.AppPath4){
+                Write-Host "Starting Aux app 4"
+                    $Script:App4 = Start-Process -FilePath $Options.$Game.AppPath4 -Credential $Creds -PassThru
+                }
+
+                Write-Host "Starting $Game"
+                IF ($Options.$Game.arg1) {
+                    Start-Process -FilePath $Options.$Game.GamePath -Wait -ArgumentList $Options.$Game.Arg1 -Credential $Creds
+                } Else {
+                    Start-Process -FilePath $Options.$Game.GamePath -Wait -Credential $Creds
+                }
+                $Splash.Close()
+            }
+        }
+    })
+    $Splash.ShowDialog() | Out-Null
 }
 
 Function Stop-Game {
@@ -284,14 +316,26 @@ Function Stop-Game {
 }
 
 Function Show-Message {
+    param (
+        [Parameter(Mandatory)]$Message,
+        [Switch]$Question
+    )
     Add-Type -AssemblyName PresentationCore,PresentationFramework
-    $ButtonType = [System.Windows.MessageBoxButton]::OK
-    $MessageIcon = [System.Windows.MessageBoxImage]::Error
+    IF ($Question) {
+        $ButtonType = [System.Windows.MessageBoxButton]::YesNo
+        $MessageIcon = [System.Windows.MessageBoxImage]::Question
+        $MessageTitle = "Confirmation"
+    } Else {
+        $ButtonType = [System.Windows.MessageBoxButton]::OK
+        $MessageIcon = [System.Windows.MessageBoxImage]::Error
+        $MessageTitle = "Error"
+    }
     $MessageBody = $Message
-    $MessageTitle = "Error:"
     $Result = [System.Windows.MessageBox]::Show($MessageBody,$MessageTitle,$ButtonType,$MessageIcon)
     $Result
 }
+
+
 #Initial Setup
 
 #Get Credentials or set them if needed
@@ -309,13 +353,15 @@ try {
 $myScript = $myinvocation.mycommand.definition
 $null = Test-Admin -MyScript "$Myscript"
 
-If (!(Test-Path -Path $env:APPDATA\DBLauncher)) {
-    mkdir $env:APPDATA\DBLauncher
-}
-
 #Set up Paths for config files
-$SettingsPath = "$env:APPDATA\DBLauncher\settings.json"
-$GamesJson = "$env:APPDATA\DBLauncher\Games.json"
+$MyAppData = "$env:APPDATA\HOTAS Launcher"
+$SettingsPath = "$MyAppData\settings.json"
+$GamesJson = "$MyAppData\Games.json"
+
+# Check that we have a settings directory and if not create it.
+If (!(Test-Path -Path $MyAppData)) {
+    mkdir $MyAppData
+}
 
 #Get existing settings or create them
 IF (Test-Path -Path "$SettingsPath") {
@@ -326,15 +372,14 @@ IF (Test-Path -Path "$SettingsPath") {
     $path = $Settings.usbdview
 }
 
-
 #Get the Joysticks now.
 $Joysticks = @(Get-Joysticks)
 
-# Get The Games
 #Test if we have a Games.json file and create it if needed
 IF (!(Test-Path -Path $GamesJson)){
     $Options = Set-Config
 }
+
 #read the contents of the Games.json file
 $Options = Get-Content -Path "$GamesJson" -Raw | ConvertFrom-Json
 
@@ -351,12 +396,13 @@ $Window = Import-Xaml "Main.xaml"
 $stackEdit = $Window.FindName('stackEdit')
 $stackEdit.Visibility = "Collapsed"
 $stackCombo = $Window.FindName('stackCombo')
+$stackControls = $Window.FindName('stackControls')
 
-#Make a combobox and set he source to our list of games
+#Make a combobox and bind to our list of games
 $ComboGame = $Window.FindName('ComboGame')
 $ComboGame.ItemsSource = $Games
 
-#Populate the window with labels and text boxes
+#Populate labels and text boxes with bindings
 $txtGameName = $Window.FindName('txtGameName')
 $txtGamePath = $Window.FindName('txtGamePath')
 $txtAppPath1 = $Window.FindName('txtAppPath1')
@@ -369,26 +415,61 @@ $lblJoy3 = $Window.FindName('lblJoy3')
 $lblJoy4 = $Window.FindName('lblJoy4')
 $txtGameArgs = $Window.FindName('txtGameArgs')
 
-#Create some buttons and actions for them
+#Assign bindings for some buttons and click actions for them
 $btnStart = $Window.FindName('btnStart')
 $btnStart.Add_Click({
-   IF ($ComboGame.SelectedItem -ne ' ') { 
-        $Game = $ComboGame.SelectedItem
-        Start-Game -Game $Game -Options $Options -Joysticks $Joysticks
-   }
+    Try {
+        IF ($ComboGame.SelectedItem -ne ' ') { 
+            $btnStart.Visibility = 'Collapsed'
+            $btnStop.Visibility = 'Visible'
+            $ComboGame.Visibility = 'Collapsed'
+            $StackControls.Visibility = 'Collapsed'
+
+            $Game = $ComboGame.SelectedItem
+            Start-Game -Game $Game -Options $Options -Joysticks $Joysticks
+        }
+    } Catch {
+        Show-Message -Message "Game Settings invalid Please Fix your thing!"
+    }
 })
 
 $btnStop = $Window.FindName('btnStop')
 $btnStop.Add_Click({
     IF ($ComboGame.SelectedItem -ne ' ') {
+        $btnStart.Visibility = 'Visible'
+        $btnStop.Visibility = 'Collapsed'
+        $ComboGame.Visibility = 'Visible'
+        $StackControls.Visibility = 'Visible'
+
         $Game = ($Window.FindName('ComboGame')).SelectedItem
         Stop-Game -Game $Game -Options $Options -Joysticks $Joysticks
+        
     }
 })
 
 $btnBrowseGame = $Window.FindName('btnBrowseGame')
 $btnBrowseGame.Add_Click({
     $txtGamePath.Text = Get-FilePath
+})
+
+$btnBrowseApp1 = $Window.FindName('btnBrowseApp1')
+$btnBrowseApp1.Add_Click({
+    $txtAppPath1.Text = Get-FilePath
+})
+
+$btnBrowseApp2 = $Window.FindName('btnBrowseApp2')
+$btnBrowseApp2.Add_Click({
+    $txtAppPath2.Text = Get-FilePath
+})
+
+$btnBrowseApp3 = $Window.FindName('btnBrowseApp3')
+$btnBrowseApp3.Add_Click({
+    $txtAppPath3.Text = Get-FilePath
+})
+
+$btnBrowseApp4 = $Window.FindName('btnBrowseApp4')
+$btnBrowseApp4.Add_Click({
+    $txtAppPath4.Text = Get-FilePath
 })
 
 $btnJoy1 = $Window.FindName('btnJoy1')
@@ -413,39 +494,46 @@ $btnJoy4.Add_Click({
 
 $btnSaveGame = $Window.FindName('btnSaveGame')
 $btnSaveGame.Add_Click({
-    $stackEdit.Visibility= "Collapsed"
-    $stackCombo.Visibility = "Visible"
-    $SelectedGame = ($Window.FindName('ComboGame')).SelectedItem
-    
-    IF ($SelectedGame -ne " "){
-        if ($SelectedGame -ne $txtGameName.Text) {
-            $Options.psobject.properties.remove($SelectedGame)
-        } 
-    }
-    $GameObject = [PSCustomObject]@{
-        Name = $txtGameName.Text
-        GamePath = $txtGamePath.Text
-        AppPath1 = $txtAppPath1.Text
-        AppPath2 = $txtAppPath2.Text
-        AppPath3 = $txtAppPath3.Text
-        AppPath4 = $txtAppPath4.Text
-        Arg1 = $txtGameArgs.Text
-        Selections = [PSCustomObject]@{
-            Stick1=$lblJoy1.Content
-            Stick2=$lblJoy2.Content
-            Stick3=$lblJoy3.Content
-            Stick4=$lblJoy4.Content
+    Try {
+        $SelectedGame = ($Window.FindName('ComboGame')).SelectedItem
+        
+        IF ($SelectedGame -ne " "){
+            if ($SelectedGame -ne $txtGameName.Text) {
+                $Options.psobject.properties.remove($SelectedGame)
+            } 
         }
+        #Create the object with all the properties needed for each game config and assign values from the text boxes
+        $GameObject = [PSCustomObject]@{
+            Name = $txtGameName.Text
+            GamePath = $txtGamePath.Text
+            AppPath1 = $txtAppPath1.Text
+            AppPath2 = $txtAppPath2.Text
+            AppPath3 = $txtAppPath3.Text
+            AppPath4 = $txtAppPath4.Text
+            Arg1 = $txtGameArgs.Text
+            Selections = [PSCustomObject]@{
+                Stick1=$lblJoy1.Content
+                Stick2=$lblJoy2.Content
+                Stick3=$lblJoy3.Content
+                Stick4=$lblJoy4.Content
+            }
+        }
+        #Add the object to $Options and overwrite if it already exists
+        Add-Member -InputObject $Options -MemberType NoteProperty -Name $txtGameName.Text -Value $GameObject -Force
+        #Write the changes to file
+        $Options | ConvertTo-Json | Out-File -FilePath "$GamesJson"
+        # Reset the source for the combobox to refresh it
+        $Games = foreach($G in $Options.PsObject.Properties){
+            $G.Name
+        }
+        $ComboGame.ItemsSource = $Games
+        $ComboGame.SelectedItem = $txtGameName.Text
+        #Set stackEdit to collapsed and stackCombo to visible
+        $stackEdit.Visibility= "Collapsed"
+        $stackCombo.Visibility = "Visible"
+    } Catch {
+        Show-Message -Message "Please ensure you give your game a name"
     }
-    Add-Member -InputObject $Options -MemberType NoteProperty -Name $txtGameName.Text -Value $GameObject -Force
-    $Options | ConvertTo-Json | Out-File -FilePath "$GamesJson"
-    
-    $Games = foreach($G in $Options.PsObject.Properties){
-        $G.Name
-    }
-    $ComboGame.ItemsSource = $Games
-    $ComboGame.SelectedItem = $txtGameName.Text
-    
 })
 
 $btnCancelEdit = $Window.FindName('btnCancelEdit')
@@ -495,5 +583,23 @@ $btnEditGame.Add_Click({
     
 })
 
+$btnDelete = $Window.FindName('btnDelete')
+$btnDelete.Add_Click({
+    $SelectedGame = ($Window.FindName('ComboGame')).SelectedItem
+    $Answer = Show-Message -Message "Are you sure you wish to Delete $SelectedGame ?" -Question
+    IF ($Answer -eq 'Yes') {
+        IF ($SelectedGame -ne " "){
+            $Options.psobject.properties.remove($SelectedGame)
+            #Write the changes to file
+            $Options | ConvertTo-Json | Out-File -FilePath "$GamesJson"
+            # Reset the source for the combobox to refresh it
+            $Games = foreach($G in $Options.PsObject.Properties){
+                $G.Name
+            }
+            $ComboGame.ItemsSource = $Games
+            $ComboGame.SelectedItem = $txtGameName.Text
+        }
+    }
+})
 #Show the window
 $Window.ShowDialog() | Out-Null
