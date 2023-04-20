@@ -385,18 +385,19 @@ IF (Test-Path -Path "$SettingsPath") {
 } Else {
     $Settings = Set-Settings
     $path = $Settings.usbdview
+    $LastGame = $Settings.lastGame
 }
 
 #Get the Joysticks now.
 $Joysticks = @(Get-Joysticks)
 
 #Test if we have a Games.json file and create it if needed
-IF (!(Test-Path -Path $GamesJson)){
+IF (Test-Path -Path $GamesJson){
+    #read the contents of the Games.json file
+    $Options = Get-Content -Path "$GamesJson" -Raw | ConvertFrom-Json
+} Else {
     $Options = Set-Config
 }
-
-#read the contents of the Games.json file
-$Options = Get-Content -Path "$GamesJson" -Raw | ConvertFrom-Json
 
 # Set up a variable to use as the source for our combobox
 $Script:Games = foreach($G in $Options.PsObject.Properties){
@@ -416,6 +417,10 @@ $stackControls = $Window.FindName('stackControls')
 #Make a combobox and bind to our list of games
 $ComboGame = $Window.FindName('ComboGame')
 $ComboGame.ItemsSource = $Games
+IF ($Games -contains $LastGame) {
+    $ComboGame.SelectedItem = $LastGame
+}
+
 
 #Populate labels and text boxes with bindings
 $txtGameName = $Window.FindName('txtGameName')
