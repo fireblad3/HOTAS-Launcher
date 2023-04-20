@@ -380,12 +380,12 @@ If (!(Test-Path -Path $MyAppData)) {
 
 #Get existing settings or create them
 IF (Test-Path -Path "$SettingsPath") {
-    $settings = Get-Content -Path "$SettingsPath" -Raw | ConvertFrom-Json
+    $Settings = Get-Content -Path "$SettingsPath" -Raw | ConvertFrom-Json
     $path = $Settings.usbdview
+    $LastGame = $Settings.lastGame
 } Else {
     $Settings = Set-Settings
     $path = $Settings.usbdview
-    $LastGame = $Settings.lastGame
 }
 
 #Get the Joysticks now.
@@ -447,6 +447,8 @@ $btnStart.Add_Click({
 
             $Game = $ComboGame.SelectedItem
             Start-Game -Game $Game -Options $Options -Joysticks $Joysticks
+            $Settings.lastGame = $Game
+            $Settings | ConvertTo-Json | Out-File -FilePath $SettingsPath
         }
     } Catch {
         Show-Message -Message "Game Settings invalid Please Fix your thing!"
