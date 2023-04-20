@@ -51,52 +51,40 @@ function Test-Admin{
 }
 
 Function Set-Config {
-
-    # Create Config
-    $Stick1 = Get-Joystick $Joysticks
-    $Stick2 = Get-Joystick $Joysticks
-    $Stick3 = Get-Joystick $Joysticks
-    $Stick4 = Get-Joystick $Joysticks
-
     $Options = [PSCustomObject]@{   
-        DEMO = [PSCustomObject]@{ 
-                Name= "DEMO"
-                Path = 'E:\Games Standalone\DEMO\Demo.exe'
-                Path2 = 'C:\Program Files (x86)\SimShaker\SimShaker for Aviators Beta\SimShaker for Aviators Beta.exe'
-                Path3 = 'C:\Program Files (x86)\SimShaker\SimShaker for Aviators Beta\SimShaker for Aviators Beta.exe'
-                Path4 = 'C:\Program Files (x86)\SimShaker\SimShaker for Aviators Beta\SimShaker for Aviators Beta.exe'
-                Path5 = 'C:\Program Files (x86)\SimShaker\SimShaker for Aviators Beta\SimShaker for Aviators Beta.exe'
-                Selections = [PSCustomObject]@{
-                    Stick1=$Stick1
-                    Stick2=$Stick2
-                    Stick3=$Stick3
-                    Stick4=$Stick4
-                }
+        ' ' = [PSCustomObject]@{ 
+            Name= $null
+            Path = $null
+            Path2 = $null
+            Path3 = $null
+            Path4 = $null
+            Path5 = $null
+            Selections = [PSCustomObject]@{
+                Stick1= $null
+                Stick2= $null
+                Stick3= $null
+                Stick4= $null
+            }
         }
-           
-        DEMO2 = [PSCustomObject]@{
-            Name = "DEMO2" 
-            Path = 'E:\Games Standalone\DEMO2\Demo2.exe' 
-            Selections = [pscustomobject]@{
-                MCGU=$MCGU
-                SGF=$SGF
-                Hog=$Hog
-            } 
-        } 
+
     }
-    $Options | ConvertTo-Json | Out-File -FilePath "$env:APPDATA\DBLauncher\Games.json"
+    $Options | ConvertTo-Json | Out-File -FilePath "$GamesJson"
     $Options
 }
 
-Function Set-Settings {
-
+Function Get-FilePath {
     Add-Type -AssemblyName System.Windows.Forms
 
     $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
     $OpenFileDialog.initialDirectory = $initialDirectory
     $OpenFileDialog.filter = "All files (*.*)| *.*"
     $OpenFileDialog.ShowDialog() | Out-Null
-    $path = $OpenFileDialog.filename
+    $Path = $OpenFileDialog.filename
+    $Path
+}
+Function Set-Settings {
+
+    $path = Get-FilePath
 
     $Settings = [PSCustomObject]@{
         usbdview = $path
@@ -295,16 +283,28 @@ Function Stop-Game {
     }
 }
 
+Function Show-Message {
+    Add-Type -AssemblyName PresentationCore,PresentationFramework
+    $ButtonType = [System.Windows.MessageBoxButton]::OK
+    $MessageIcon = [System.Windows.MessageBoxImage]::Error
+    $MessageBody = $Message
+    $MessageTitle = "Error:"
+    $Result = [System.Windows.MessageBox]::Show($MessageBody,$MessageTitle,$ButtonType,$MessageIcon)
+    $Result
+}
 #Initial Setup
 
 #Get Credentials or set them if needed
-$Creds = (Get-StoredCredential -Target "GameLauncher")
-If (!(Get-StoredCredential -Target "GameLauncher")){
-    Write-Warning -Message "Credentials don't exist, prompting user"
-    $Creds = Get-Credential -Message "Enter your windows username and Password to run the game" | New-StoredCredential -Target "GameLauncher" -Type Generic -Persist Enterprise
+try {
     $Creds = (Get-StoredCredential -Target "GameLauncher")
+    If (!(Get-StoredCredential -Target "GameLauncher")){
+        Write-Warning -Message "Credentials don't exist, prompting user"
+        $Creds = Get-Credential -Message "Enter your windows username and Password to run the game" | New-StoredCredential -Target "GameLauncher" -Type Generic -Persist Enterprise
+        $Creds = (Get-StoredCredential -Target "GameLauncher")
+    }
+} catch {
+    Show-Message -Message "Failure to set Credentials"
 }
-
 # Check that we are running as admin and restart if we aren't
 $myScript = $myinvocation.mycommand.definition
 $null = Test-Admin -MyScript "$Myscript"
@@ -312,8 +312,12 @@ $null = Test-Admin -MyScript "$Myscript"
 If (!(Test-Path -Path $env:APPDATA\DBLauncher)) {
     mkdir $env:APPDATA\DBLauncher
 }
-$SettingsPath = "$env:APPDATA\DBLauncher\settings.json"
 
+#Set up Paths for config files
+$SettingsPath = "$env:APPDATA\DBLauncher\settings.json"
+$GamesJson = "$env:APPDATA\DBLauncher\Games.json"
+
+#Get existing settings or create them
 IF (Test-Path -Path "$SettingsPath") {
     $settings = Get-Content -Path "$SettingsPath" -Raw | ConvertFrom-Json
     $path = $Settings.usbdview
@@ -327,11 +331,14 @@ IF (Test-Path -Path "$SettingsPath") {
 $Joysticks = @(Get-Joysticks)
 
 # Get The Games
-IF (!(Test-Path -Path $env:APPDATA\DBLauncher\Games.json)){
+#Test if we have a Games.json file and create it if needed
+IF (!(Test-Path -Path $GamesJson)){
     $Options = Set-Config
-} 
-$Options = Get-Content -Path "$env:APPDATA\DBLauncher\games.json" -Raw | ConvertFrom-Json
+}
+#read the contents of the Games.json file
+$Options = Get-Content -Path "$GamesJson" -Raw | ConvertFrom-Json
 
+# Set up a variable to use as the source for our combobox
 $Script:Games = foreach($G in $Options.PsObject.Properties){
     $G.Name
 }
@@ -340,27 +347,16 @@ $Script:Games = foreach($G in $Options.PsObject.Properties){
 
 $Window = Import-Xaml "Main.xaml"
 
-
-$ComboGame = $Window.FindName('ComboGame')
-$ComboGame.ItemsSource = $Games
-#($Window.FindName('ComboGame')).ItemsSource = $Games
-
-$Button1 = $Window.FindName('Button1')
-$Button1.Add_Click({
-   #$Game = ($Window.FindName('ComboGame')).SelectedItem
-   $Game = $ComboGame.SelectedItem
-    Start-Game -Game $Game -Options $Options -Joysticks $Joysticks
-})
-
-$Button2 = $Window.FindName('Button2')
-$Button2.Add_Click({
-   $Game = ($Window.FindName('ComboGame')).SelectedItem
-    Stop-Game -Game $Game -Options $Options -Joysticks $Joysticks
-})
-
+#Make some stack Panels so we can hide them as needed and Hide the edit panel
 $stackEdit = $Window.FindName('stackEdit')
 $stackEdit.Visibility = "Collapsed"
+$stackCombo = $Window.FindName('stackCombo')
 
+#Make a combobox and set he source to our list of games
+$ComboGame = $Window.FindName('ComboGame')
+$ComboGame.ItemsSource = $Games
+
+#Populate the window with labels and text boxes
 $txtGameName = $Window.FindName('txtGameName')
 $txtGamePath = $Window.FindName('txtGamePath')
 $txtAppPath1 = $Window.FindName('txtAppPath1')
@@ -373,32 +369,59 @@ $lblJoy3 = $Window.FindName('lblJoy3')
 $lblJoy4 = $Window.FindName('lblJoy4')
 $txtGameArgs = $Window.FindName('txtGameArgs')
 
-$Button8 = $Window.FindName('Button8')
-$Button8.Add_Click({
+#Create some buttons and actions for them
+$btnStart = $Window.FindName('btnStart')
+$btnStart.Add_Click({
+   IF ($ComboGame.SelectedItem -ne ' ') { 
+        $Game = $ComboGame.SelectedItem
+        Start-Game -Game $Game -Options $Options -Joysticks $Joysticks
+   }
+})
+
+$btnStop = $Window.FindName('btnStop')
+$btnStop.Add_Click({
+    IF ($ComboGame.SelectedItem -ne ' ') {
+        $Game = ($Window.FindName('ComboGame')).SelectedItem
+        Stop-Game -Game $Game -Options $Options -Joysticks $Joysticks
+    }
+})
+
+$btnBrowseGame = $Window.FindName('btnBrowseGame')
+$btnBrowseGame.Add_Click({
+    $txtGamePath.Text = Get-FilePath
+})
+
+$btnJoy1 = $Window.FindName('btnJoy1')
+$btnJoy1.Add_Click({
     $lblJoy1.Content = Get-Joystick -Joysticks $Joysticks
 })
-$Button9 = $Window.FindName('Button9')
-$Button9.Add_Click({
+
+$btnJoy2 = $Window.FindName('btnJoy2')
+$btnJoy2.Add_Click({
     $lblJoy2.Content = Get-Joystick -Joysticks $Joysticks
 })
-$Button10 = $Window.FindName('Button10')
-$Button10.Add_Click({
+
+$btnJoy3 = $Window.FindName('btnJoy3')
+$btnJoy3.Add_Click({
     $lblJoy3.Content = Get-Joystick -Joysticks $Joysticks
 })
-$Button11 = $Window.FindName('Button11')
-$Button11.Add_Click({
+
+$btnJoy4 = $Window.FindName('btnJoy4')
+$btnJoy4.Add_Click({
     $lblJoy4.Content = Get-Joystick -Joysticks $Joysticks
 })
 
-$Button12 = $Window.FindName('Button12')
-$Button12.Add_Click({
+$btnSaveGame = $Window.FindName('btnSaveGame')
+$btnSaveGame.Add_Click({
     $stackEdit.Visibility= "Collapsed"
+    $stackCombo.Visibility = "Visible"
     $SelectedGame = ($Window.FindName('ComboGame')).SelectedItem
     
-    if ($SelectedGame -ne $txtGameName.Text) {
-        $Options.psobject.properties.remove($SelectedGame)
-    } 
-
+    IF ($SelectedGame -ne " "){
+        if ($SelectedGame -ne $txtGameName.Text) {
+            $Options.psobject.properties.remove($SelectedGame)
+        } 
+    }
     $GameObject = [PSCustomObject]@{
         Name = $txtGameName.Text
         GamePath = $txtGamePath.Text
@@ -414,33 +437,48 @@ $Button12.Add_Click({
             Stick4=$lblJoy4.Content
         }
     }
-    Add-Member -InputObject $Options -MemberType NoteProperty -Name $txtGameName.Text -Value $GameObject
-    $Options | ConvertTo-Json | Out-File -FilePath "$env:APPDATA\DBLauncher\Games.json"
+    Add-Member -InputObject $Options -MemberType NoteProperty -Name $txtGameName.Text -Value $GameObject -Force
+    $Options | ConvertTo-Json | Out-File -FilePath "$GamesJson"
     
-    $Script:Games = foreach($G in $Options.PsObject.Properties){
+    $Games = foreach($G in $Options.PsObject.Properties){
         $G.Name
     }
     $ComboGame.ItemsSource = $Games
+    $ComboGame.SelectedItem = $txtGameName.Text
     
 })
 
-$btnCancel = $Window.FindName('btnCancel')
-$btnCancel.Add_Click({
+$btnCancelEdit = $Window.FindName('btnCancelEdit')
+$btnCancelEdit.Add_Click({
     $stackEdit.Visibility= "Collapsed"
+    $stackCombo.Visibility = "Visible"
 })
 
 $btnNewGame = $Window.FindName('btnNewGame')
 $btnNewGame.Add_Click({
-    $Script:Games = foreach($G in $Options.PsObject.Properties){
-        $G.Name
-    }
-    $ComboGame.ItemsSource = $Games
+    
+    $ComboGame.SelectedItem = " "
     $stackEdit.Visibility = "Visible"
+    $stackCombo.Visibility = "Collapsed"
+    $Game = ($Window.FindName('ComboGame')).SelectedItem
+    
+    $txtGameName.Text = $Options.$Game.Name
+    $txtGamePath.Text = $Options.$Game.GamePath
+    $txtAppPath1.Text = $Options.$Game.AppPath1
+    $txtAppPath2.Text = $Options.$Game.AppPath2
+    $txtAppPath3.Text = $Options.$Game.AppPath3
+    $txtAppPath4.Text = $Options.$Game.AppPath4
+    $txtGameArgs.Text = $Options.$Game.Arg1
+    $lblJoy1.Content = $Options.$Game.Selections.Stick1
+    $lblJoy2.Content = $Options.$Game.Selections.Stick2
+    $lblJoy3.Content = $Options.$Game.Selections.Stick3
+    $lblJoy4.Content = $Options.$Game.Selections.Stick4
 })
 
-$Button13 = $Window.FindName('Button13')
-$Button13.Add_Click({
+$btnEditGame = $Window.FindName('btnEditGame')
+$btnEditGame.Add_Click({
     $stackEdit.Visibility = "Visible"
+    $stackCombo.Visibility = "Collapsed"
     $Game = ($Window.FindName('ComboGame')).SelectedItem
     
     $txtGameName.Text = $Options.$Game.Name
@@ -456,4 +494,6 @@ $Button13.Add_Click({
     $lblJoy4.Content = $Options.$Game.Selections.Stick4
     
 })
+
+#Show the window
 $Window.ShowDialog() | Out-Null
