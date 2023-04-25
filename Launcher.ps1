@@ -1,22 +1,30 @@
 <#
-Copyright 2023, Daniel Bailey.
-    This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as 
-    published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
-    This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
-    without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
-    See the GNU General Public License for more details.
+    Copyright (C) 2023  Daniel Bailey
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
 
-    See <https://www.gnu.org/licenses/>.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see https://www.gnu.org/licenses/."
 
 
-Dependencies: (optionally downloaded by the application on first launch)
+Dependencies: (optionally downloaded by the application on first launch). These applications are not distributed or supported by me but can be found in the following locations.
     Powershell Module CredentialManager - https://www.powershellgallery.com/packages/CredentialManager/2.0
     usbdview - https://www.nirsoft.net/utils/
 
 
 Updates:
 Version 1.0 - Released 20/04/2023
-Version 1.0.0.1 - Updated Description, Update to handling credentials if user does not want to install CredentialManager module.
+Version 1.0.0.1 -   Updated Description
+                    Update to handling credentials if user does not want to install CredentialManager module
+                    Updated comments
+                    Added About Window with License info etc
 
 #>
 param(
@@ -474,6 +482,11 @@ $lblJoy4 = $Window.FindName('lblJoy4')
 $txtGameArgs = $Window.FindName('txtGameArgs')
 
 #Assign bindings for some buttons and click actions for them
+$btnAbout = $Window.FindName('btnAbout')
+$btnAbout.Add_Click({
+    $About = Import-Xaml "About.xaml"
+    $About.ShowDialog()
+})
 $btnStart = $Window.FindName('btnStart')
 $btnStart.Add_Click({
     Try {

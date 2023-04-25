@@ -1,0 +1,61 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="About"
+        Background="#66ffcc"
+        SizeToContent="WidthAndHeight"
+        MinHeight="200"
+        MinWidth="200"
+>
+<StackPanel Margin="30" Background="#f0f0f5">
+    <Label FontSize="14" FontWeight="Bold">Source</Label>
+    <TextBlock  Margin="10" FontSize="12" TextWrapping="WrapWithOverflow" MaxWidth="600">
+        Original source code can be found on github https://github.com/fireblad3/HOTAS-Launcher.
+    </TextBlock>
+    <Label FontSize="14" FontWeight="Bold">Purpose</Label>
+    <TextBlock Margin="10" FontSize="12" TextWrapping="WrapWithOverflow" MaxWidth="600">
+        I was getting frustrated with two things, first because I have 5 usb controllers my PC would not enter sleep
+        or standby modes, Disabling each one Manually when I finished playing was not an option.
+    </TextBlock>
+    <TextBlock Margin="10" FontSize="12" TextWrapping="WrapWithOverflow" MaxWidth="600">
+        Secondly, I found it very frustrating when I launched Star Citizen after re-plugging any
+        or all of my joysticks (or forgot to turn off my wheel after racing) and suddenly Star Citizen
+        would have re-organized my sticks and messed up all the mappings.
+    </TextBlock>
+    <TextBlock Margin="10" FontSize="12" TextWrapping="WrapWithOverflow" MaxWidth="600">
+        For me this application solves both of those issues and also allows me to launch other supporting programs such as
+        Transducer applications, Windowed Borderless Gaming, crew cheif etc and close them when I'm done with one simple button.
+    </TextBlock>
+    <Label FontSize="14" FontWeight="Bold">Copyright</Label>
+    <TextBlock Margin="10" FontSize="12" TextWrapping="WrapWithOverflow" MaxWidth="600">
+        Copyright (C) 2023  Daniel Bailey
+    </TextBlock>
+    <TextBlock Margin="10" FontSize="12" TextWrapping="WrapWithOverflow" MaxWidth="600">
+        This program is free software: you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+        the Free Software Foundation, either version 3 of the License, or
+        (at your option) any later version.
+    </TextBlock>
+    <TextBlock Margin="10" FontSize="12" TextWrapping="WrapWithOverflow" MaxWidth="600">
+        This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        GNU General Public License for more details.
+    </TextBlock>
+    <TextBlock Margin="10" FontSize="12" TextWrapping="WrapWithOverflow" MaxWidth="600">
+        You should have received a copy of the GNU General Public License
+        along with this program.  If not, see https://www.gnu.org/licenses/."
+    </TextBlock>
+    <Label FontSize="14" FontWeight="Bold">Dependencies</Label>
+    <TextBlock Margin="10" FontSize="12" TextWrapping="WrapWithOverflow" MaxWidth="600">
+        Optionally downloaded from the locations below by the application on first launch. 
+        These applications are not distributed or supported by me but can be found in the following locations.
+    </TextBlock>
+    <TextBlock Margin="5" FontSize="12" TextWrapping="WrapWithOverflow" MaxWidth="600">
+        Powershell Module CredentialManager - https://www.powershellgallery.com/packages/CredentialManager/2.0
+    </TextBlock>
+    <TextBlock Margin="5" FontSize="12" TextWrapping="WrapWithOverflow" MaxWidth="600">
+        usbdview - https://www.nirsoft.net/utils/
+    </TextBlock>
+</StackPanel>
+
+</Window>

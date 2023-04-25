@@ -1,12 +1,15 @@
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Game Picker"
-        Background="#00bfff"
+        Background="#66ffcc"
         SizeToContent="WidthAndHeight"
         MinHeight="300"
         MinWidth="300"
 >
 <StackPanel>
+    <StackPanel HorizontalAlignment="right">
+        <Button Content="About" x:Name="btnAbout" Height="30" Width="70" Margin="5"/>
+    </StackPanel>
     <StackPanel x:Name="stackCombo" Orientation="Vertical" HorizontalAlignment="Center">
         <StackPanel Margin="10" Orientation="Horizontal" HorizontalAlignment="Center">
             <ComboBox x:Name="ComboGame" Margin="10" Height="25" Width="200" Padding="3"></ComboBox>
