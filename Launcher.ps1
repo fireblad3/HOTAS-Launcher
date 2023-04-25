@@ -27,27 +27,14 @@ Version 1.0.0.1-alpha -     Updated Description
                             Updated comments
                             Added About Window with License info etc
                             Added auto check for updates feature
+Version 1.0.0.2-alpha -     Fixed bug causing version to always be out of date.
 
 #>
 param(
 [switch]$Elevated
 )
-$version = "1.0.0.1-alpha"
-Function Get-Version {
-    $latestRelease = Invoke-WebRequest https://api.github.com/repos/fireblad3/HOTAS-Launcher/releases -Headers @{"Accept"="application/json"}
-    $json = $latestRelease.Content | ConvertFrom-Json
-    $latestVersion = $json.tag_name
-    if ($Version -ne $latestVersion ) {
-        $Ver = [PSCustomObject]@{
-            Version = $latestVersion
-            URL = "https://github.com/fireblad3/HOTAS-Launcher/releases/download/$latestVersion/hotas.launcher.exe"
-        }
-        
-    }Else {
-        $Ver = $false
-    }
-    $Ver
-}
+$version = "v1.0.0.2-alpha"
+
 function Import-Xaml {
     
     Param(
@@ -455,18 +442,32 @@ IF (Test-Path -Path "$SettingsPath") {
 #Check if we have the latest version of HOTAS Launcher
 IF ($Settings.updatecheck) {
     Try {
-        $version = Get-Version
-        $URL = $version.URL
-        $ver = $version.version
-        if ($version -ne $false) {
+        $latestRelease = Invoke-WebRequest https://api.github.com/repos/fireblad3/HOTAS-Launcher/releases -Headers @{"Accept"="application/json"}
+        $json = $latestRelease.Content | ConvertFrom-Json
+        $Versions = [PSCustomObject]@{
+            Version = $json.tag_name
+            Created = $json.created_at
+        }
+        $Versions | Sort-Object -Property 'Created'
+        $latestVersion = $Versions.Version[0]
+    
+        $Ver = [PSCustomObject]@{
+            Version = $latestVersion
+            URL = "https://github.com/fireblad3/HOTAS-Launcher/releases/download/$latestVersion/hotas.launcher.exe"
+        }
+        
+        if ($Ver.Version -ne $Version) {
             #Time to update
-            $download = Show-Message -Message "There is a new version ($Ver) of Hotas-Launcher available Would you like to download it in your browser now?" -Question
+            $URL = $Ver.URL
+            $version = $Ver.Version
+            $download = Show-Message -Message "There is a new version ($Version) of Hotas-Launcher available Would you like to download it in your browser now?" -Question
             IF ($download -eq "Yes") {
                 Start-Process -FilePath $URL
                 Exit
             }
         }
     } Catch {
+        $Error
         #Couldn't get version info so presuming no internet and no big deal so failing silently
     }
 }
