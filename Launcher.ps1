@@ -9,7 +9,7 @@ Copyright 2023, Daniel Bailey.
     See <https://www.gnu.org/licenses/>.
 
 
-Dependencies: 
+Dependencies: (optionally downloaded by the application on first launch)
     Powershell Module CredentialManager - https://www.powershellgallery.com/packages/CredentialManager/2.0
     usbdview - https://www.nirsoft.net/utils/
 
@@ -368,36 +368,43 @@ Function Show-Message {
     $Result
 }
 
-# Check that we are running as admin and restart if we aren't
+# Check that we are running as admin and restart if we aren't(this only works when run as a .ps1, the exe has to be launched as administrator)
 $myScript = $myinvocation.mycommand.definition
 $null = Test-Admin -MyScript "$Myscript"
 
 # Import the Credential Manager this allows us to save some credentials so that the elevated window can launch the game as your standard user.
 if (Get-Module -ListAvailable -Name CredentialManager) {
     Import-Module CredentialManager
+    $CredentialsManaged = $true
 } else {
     $installCM = Show-Message -Message "The Powershell CredentialManager module is required, okay to install? If you say no you will be prompted for credentials each time you start a game from the launcher" -Question
     IF ($installCM -eq 'Yes') {
         Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
         Install-Module CredentialManager -force
         Import-Module CredentialManager
+        $CredentialsManaged = $true
+    } Else {
+        $CredentialsManaged = $false
     }
 }
 
 #Initial Setup
 
 #Get Credentials or set them if needed
-try {
-    $Creds = (Get-StoredCredential -Target "HOTAS Launcher")
-    If (!(Get-StoredCredential -Target "HOTAS Launcher")){
-        Write-Warning -Message "Credentials don't exist, prompting user"
-        $Creds = Get-Credential -Message "Enter your windows username and Password to run the game" | New-StoredCredential -Target "HOTAS Launcher" -Type Generic -Persist Enterprise
+IF ($CredentialsManaged) {
+    try {
         $Creds = (Get-StoredCredential -Target "HOTAS Launcher")
+        If (!(Get-StoredCredential -Target "HOTAS Launcher")){
+            Write-Warning -Message "Credentials don't exist, prompting user"
+            $Creds = Get-Credential -Message "Enter your windows username and Password to run the game" | New-StoredCredential -Target "HOTAS Launcher" -Type Generic -Persist Enterprise
+            $Creds = (Get-StoredCredential -Target "HOTAS Launcher")
+        }
+    } catch {
+        Show-Message -Message $Error
     }
-} catch {
-    Show-Message -Message $Error
+} Else {
+    $Creds = (Get-Credential -Message "Please enter your windows username and password for launching the game as your standard user")
 }
-
 
 #Set up Paths for config files
 $MyAppData = "$env:APPDATA\HOTAS Launcher"
