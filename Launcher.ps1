@@ -16,7 +16,7 @@ Dependencies: (optionally downloaded by the application on first launch)
 
 Updates:
 Version 1.0 - Released 20/04/2023
-
+Version 1.0.0.1 - Updated Description, Update to handling credentials if user does not want to install CredentialManager module.
 
 #>
 param(
@@ -377,7 +377,7 @@ if (Get-Module -ListAvailable -Name CredentialManager) {
     Import-Module CredentialManager
     $CredentialsManaged = $true
 } else {
-    $installCM = Show-Message -Message "The Powershell CredentialManager module is required, okay to install? If you say no you will be prompted for credentials each time you start a game from the launcher" -Question
+    $installCM = Show-Message -Message "The Powershell CredentialManager module is required, okay to install? If you say no you will be prompted for credentials each time" -Question
     IF ($installCM -eq 'Yes') {
         Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
         Install-Module CredentialManager -force
@@ -442,11 +442,11 @@ $Script:Games = foreach($G in $Options.PsObject.Properties){
     $G.Name
 }
 
-#Create the Window
+#Create the main Window
 
 $Window = Import-Xaml "Main.xaml"
 
-#Make some stack Panels so we can hide them as needed and Hide the edit panel
+#Bind some stack Panels so we can hide them as needed and Hide the edit panel
 $stackEdit = $Window.FindName('stackEdit')
 $stackEdit.Visibility = "Collapsed"
 $stackCombo = $Window.FindName('stackCombo')
@@ -477,14 +477,18 @@ $txtGameArgs = $Window.FindName('txtGameArgs')
 $btnStart = $Window.FindName('btnStart')
 $btnStart.Add_Click({
     Try {
-        IF ($ComboGame.SelectedItem -ne ' ') { 
+        IF ($ComboGame.SelectedItem -ne ' ') { #Only perform an action if a game is selected
+            # Set visibility to hidden on some items to prevent user from crashing the app... and show the stop button
             $btnStart.Visibility = 'Collapsed'
             $btnStop.Visibility = 'Visible'
             $ComboGame.Visibility = 'Collapsed'
             $StackControls.Visibility = 'Collapsed'
-
+            
+            #use the game selected from the combobox
             $Game = $ComboGame.SelectedItem
+            #Start the game itself using the current game and preferences
             Start-Game -Game $Game -Options $Options -Joysticks $Joysticks
+            #Save the last game we have launched so that we can select it on next launch by default
             $Settings.lastGame = $Game
             $Settings | ConvertTo-Json | Out-File -FilePath $SettingsPath
         }
@@ -495,18 +499,22 @@ $btnStart.Add_Click({
 
 $btnStop = $Window.FindName('btnStop')
 $btnStop.Add_Click({
-    IF ($ComboGame.SelectedItem -ne ' ') {
+    IF ($ComboGame.SelectedItem -ne ' ') {#Only perform an action if a game is selected
+        # Set visibility to hidden on some items to prevent user from crashing the app... and show the stop button
         $btnStart.Visibility = 'Visible'
         $btnStop.Visibility = 'Collapsed'
         $ComboGame.Visibility = 'Visible'
         $StackControls.Visibility = 'Visible'
 
+        #use the game selected from the combobox
         $Game = ($Window.FindName('ComboGame')).SelectedItem
+        #Stop the game using the game selected and preferences
         Stop-Game -Game $Game -Options $Options -Joysticks $Joysticks
         
     }
 })
 
+#Populate the file path textboxes using a file picker
 $btnBrowseGame = $Window.FindName('btnBrowseGame')
 $btnBrowseGame.Add_Click({
     $txtGamePath.Text = Get-FilePath
@@ -532,6 +540,7 @@ $btnBrowseApp4.Add_Click({
     $txtAppPath4.Text = Get-FilePath
 })
 
+#Populate the Joysticks textboxes using a joystick picker
 $btnJoy1 = $Window.FindName('btnJoy1')
 $btnJoy1.Add_Click({
     $lblJoy1.Content = Get-Joystick -Joysticks $Joysticks
@@ -555,9 +564,10 @@ $btnJoy4.Add_Click({
 $btnSaveGame = $Window.FindName('btnSaveGame')
 $btnSaveGame.Add_Click({
     Try {
+        #use the game
         $SelectedGame = ($Window.FindName('ComboGame')).SelectedItem
         
-        IF ($SelectedGame -ne " "){
+        IF ($SelectedGame -ne " "){ #If we have selected a game and changed the name remove the old one
             if ($SelectedGame -ne $txtGameName.Text) {
                 $Options.psobject.properties.remove($SelectedGame)
             } 
@@ -598,18 +608,22 @@ $btnSaveGame.Add_Click({
 
 $btnCancelEdit = $Window.FindName('btnCancelEdit')
 $btnCancelEdit.Add_Click({
+    #not changing anything after all, so lets just hide everything and not use it (it gets refreshed before being shown again if you click edit again)
     $stackEdit.Visibility= "Collapsed"
     $stackCombo.Visibility = "Visible"
 })
 
 $btnNewGame = $Window.FindName('btnNewGame')
 $btnNewGame.Add_Click({
-    
+    #First set the selected Item back to nothing to ensure a blank config is presented
     $ComboGame.SelectedItem = " "
+    #Hide the combo box and show the edit fields
     $stackEdit.Visibility = "Visible"
     $stackCombo.Visibility = "Collapsed"
+    #Set the game variable as blank to prevent errors and allow us to blank all the fields
     $Game = ($Window.FindName('ComboGame')).SelectedItem
     
+    #blank all the fields
     $txtGameName.Text = $Options.$Game.Name
     $txtGamePath.Text = $Options.$Game.GamePath
     $txtAppPath1.Text = $Options.$Game.AppPath1
@@ -625,10 +639,13 @@ $btnNewGame.Add_Click({
 
 $btnEditGame = $Window.FindName('btnEditGame')
 $btnEditGame.Add_Click({
+    #hide the combo box to prevent user from causing problems and show the edit fields
     $stackEdit.Visibility = "Visible"
     $stackCombo.Visibility = "Collapsed"
+    #Select the game to the selected item from the combobox
     $Game = ($Window.FindName('ComboGame')).SelectedItem
     
+    #set all the fields to their current settings
     $txtGameName.Text = $Options.$Game.Name
     $txtGamePath.Text = $Options.$Game.GamePath
     $txtAppPath1.Text = $Options.$Game.AppPath1
@@ -645,10 +662,13 @@ $btnEditGame.Add_Click({
 
 $btnDelete = $Window.FindName('btnDelete')
 $btnDelete.Add_Click({
+    #lets use the game that is selected for this...
     $SelectedGame = ($Window.FindName('ComboGame')).SelectedItem
+    #Double check the user did not get click happy
     $Answer = Show-Message -Message "Are you sure you wish to Delete $SelectedGame ?" -Question
-    IF ($Answer -eq 'Yes') {
-        IF ($SelectedGame -ne " "){
+    IF ($Answer -eq 'Yes') {# Well we warned him, lets go...
+        IF ($SelectedGame -ne " "){ #nah you're not allowed to delete the blank game ;)
+            #Remove the object for that game
             $Options.psobject.properties.remove($SelectedGame)
             #Write the changes to file
             $Options | ConvertTo-Json | Out-File -FilePath "$GamesJson"
