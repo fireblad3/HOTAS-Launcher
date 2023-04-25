@@ -20,17 +20,34 @@ Dependencies: (optionally downloaded by the application on first launch). These 
 
 
 Updates:
-Version 1.0 - Released 20/04/2023
-Version 1.0.0.1 -   Updated Description
-                    Update to handling credentials if user does not want to install CredentialManager module
-                    Updated comments
-                    Added About Window with License info etc
+Version v1.0-alpha -        Released 20/04/2023
+
+Version 1.0.0.1-alpha -     Updated Description
+                            Update to handling credentials if user does not want to install CredentialManager module
+                            Updated comments
+                            Added About Window with License info etc
+                            Added auto check for updates feature
 
 #>
 param(
 [switch]$Elevated
 )
-
+$version = "1.0.0.1-alpha"
+Function Get-Version {
+    $latestRelease = Invoke-WebRequest https://api.github.com/repos/fireblad3/HOTAS-Launcher/releases -Headers @{"Accept"="application/json"}
+    $json = $latestRelease.Content | ConvertFrom-Json
+    $latestVersion = $json.tag_name
+    if ($Version -ne $latestVersion ) {
+        $Ver = [PSCustomObject]@{
+            Version = $latestVersion
+            URL = "https://github.com/fireblad3/HOTAS-Launcher/releases/download/$latestVersion/hotas.launcher.exe"
+        }
+        
+    }Else {
+        $Ver = $false
+    }
+    $Ver
+}
 function Import-Xaml {
     
     Param(
@@ -109,7 +126,7 @@ Function Get-FilePath {
 }
 Function Set-Settings {
     
-    $Download = Show-Message -Message "Would you like to downlaod usbdview automatically from https://www.nirsoft.net/utils/ ?" -Question
+    $Download = Show-Message -Message "Would you like to download usbdview automatically from https://www.nirsoft.net/utils/ ?" -Question
     IF ($download -eq 'Yes') {
         Try {
             $url = "https://www.nirsoft.net/utils/usbdeview-x64.zip"
@@ -129,6 +146,7 @@ Function Set-Settings {
     $Settings = [PSCustomObject]@{
         usbdview = $path
         lastGame = $false
+        updatecheck = $true
     }
     $Settings | ConvertTo-Json | Out-File -FilePath "$MyAppData\Settings.json"
 
@@ -434,6 +452,25 @@ IF (Test-Path -Path "$SettingsPath") {
     $path = $Settings.usbdview
 }
 
+#Check if we have the latest version of HOTAS Launcher
+IF ($Settings.updatecheck) {
+    Try {
+        $version = Get-Version
+        $URL = $version.URL
+        $ver = $version.version
+        if ($version -ne $false) {
+            #Time to update
+            $download = Show-Message -Message "There is a new version ($Ver) of Hotas-Launcher available Would you like to download it in your browser now?" -Question
+            IF ($download -eq "Yes") {
+                Start-Process -FilePath $URL
+                Exit
+            }
+        }
+    } Catch {
+        #Couldn't get version info so presuming no internet and no big deal so failing silently
+    }
+}
+
 #Get the Joysticks now.
 $Joysticks = @(Get-Joysticks)
 
@@ -469,6 +506,24 @@ IF ($Games -contains $LastGame) {
 
 
 #Populate labels and text boxes with bindings
+$chkVersion = $Window.FindName('chkVersion')
+$chkVersion.IsChecked = $Settings.updatecheck
+$chkVersion.Add_Checked({
+    Try {
+        $Settings.updatecheck = $chkVersion.IsChecked
+    } Catch {
+        $Settings | Add-Member -NotePropertyName "updatecheck" -NotePropertyValue $chkVersion.IsChecked
+    }
+    $Settings | ConvertTo-Json | Out-File -FilePath "$MyAppData\Settings.json"
+})
+$chkVersion.Add_UnChecked({
+    Try {
+        $Settings.updatecheck = $chkVersion.IsChecked
+    } Catch {
+        $Settings | Add-Member -NotePropertyName "updatecheck" -NotePropertyValue $chkVersion.IsChecked
+    }
+    $Settings | ConvertTo-Json | Out-File -FilePath "$MyAppData\Settings.json"
+})
 $txtGameName = $Window.FindName('txtGameName')
 $txtGamePath = $Window.FindName('txtGamePath')
 $txtAppPath1 = $Window.FindName('txtAppPath1')

@@ -7,7 +7,8 @@
         MinWidth="300"
 >
 <StackPanel>
-    <StackPanel HorizontalAlignment="right">
+    <StackPanel HorizontalAlignment="right" Orientation="Horizontal">
+        <CheckBox x:Name="chkVersion" Content="Check for updates on startup?"/>
         <Button Content="About" x:Name="btnAbout" Height="30" Width="70" Margin="5"/>
     </StackPanel>
     <StackPanel x:Name="stackCombo" Orientation="Vertical" HorizontalAlignment="Center">
