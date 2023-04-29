@@ -31,7 +31,7 @@ Version 1.0.0.1-alpha -     Updated Description
 Version 1.0.0.2-alpha -     Fixed bug causing version to always be out of date.
 
 Version 1.0.0.3-alpha -     Removed wait from game launch so that the app window is not locked up while the game is running, it was no longer automating the closure of apps etc anyway.
-
+                            Converted all xml to variables within the main script and modified Import-Xaml to accept a variable or a file using params to enable use of a file while testing or coding the xaml (for formatting help)
 
 #>
 param(
