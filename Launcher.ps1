@@ -18,7 +18,8 @@ Dependencies: (optionally downloaded by the application on first launch). These 
     Powershell Module CredentialManager - https://www.powershellgallery.com/packages/CredentialManager/2.0
     usbdview - https://www.nirsoft.net/utils/
 
-
+#>
+<#
 Updates:
 Version v1.0-alpha -        Released 20/04/2023
 
@@ -30,7 +31,7 @@ Version 1.0.0.1-alpha -     Updated Description
 Version 1.0.0.2-alpha -     Fixed bug causing version to always be out of date.
 
 Version 1.0.0.3-alpha -     Removed wait from game launch so that the app window is not locked up while the game is running, it was no longer automating the closure of apps etc anyway.
-                            
+
 
 #>
 param(
@@ -41,11 +42,17 @@ $version = "v1.0.0.2-alpha"
 function Import-Xaml {
     
     Param(
-        [String]$xfile
+        [String]$xfile,
+        $xvar
     )
     [System.Reflection.Assembly]::LoadWithPartialName("PresentationFramework") | Out-Null
-	[xml]$xaml = Get-Content -Path $psScriptRoot\$xfile
-	$manager = New-Object System.Xml.XmlNamespaceManager -ArgumentList $xaml.NameTable
+	IF ($xfile) {
+        [xml]$xaml = Get-Content -Path $psScriptRoot\$xfile
+    }
+    IF ($xvar) {
+        [xml]$xaml = $xvar
+    }
+    $manager = New-Object System.Xml.XmlNamespaceManager -ArgumentList $xaml.NameTable
 	$manager.AddNamespace("x", "http://schemas.microsoft.com/winfx/2006/xaml");
 	$xamlReader = New-Object System.Xml.XmlNodeReader $xaml
 	[Windows.Markup.XamlReader]::Load($xamlReader)
@@ -114,6 +121,7 @@ Function Get-FilePath {
     $Path = $OpenFileDialog.filename
     $Path
 }
+
 Function Set-Settings {
     
     $Download = Show-Message -Message "Would you like to download usbdview automatically from https://www.nirsoft.net/utils/ ?" -Question
@@ -143,9 +151,13 @@ Function Set-Settings {
     # Return
     $Settings
 }
+
 Function Get-Joysticks {
+    Param(
+        $xml
+    )
     
-    $SplashPnpDevice = Import-Xaml "SplashPnpDevice.xaml"
+    $SplashPnpDevice = Import-Xaml -xvar $xml
     $SplashPnpDevice.Add_ContentRendered({
         $output = Get-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -match '^USB'}
         $output = $output | Where-Object {$_.FriendlyName -notmatch 'Hub'  } 
@@ -272,10 +284,11 @@ Function Start-Game {
     param(
         [String]$Game,
         $Options,
-        $Joysticks
+        $Joysticks,
+        $xml
     )
 
-    $Splash = Import-Xaml "Splash.xaml"
+    $Splash = Import-Xaml -xvar $xml
     $Splash.Add_ContentRendered({    
         
     
@@ -388,6 +401,215 @@ Function Show-Message {
 $myScript = $myinvocation.mycommand.definition
 $null = Test-Admin -MyScript "$Myscript"
 
+#Set up the xml variables
+$xmlMain = @"
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Game Picker"
+        Background="#66ffcc"
+        SizeToContent="WidthAndHeight"
+        MinHeight="300"
+        MinWidth="300"
+>
+<StackPanel>
+    <StackPanel HorizontalAlignment="right" Orientation="Horizontal">
+        <CheckBox x:Name="chkVersion" Content="Check for updates on startup?"/>
+        <Button Content="About" x:Name="btnAbout" Height="30" Width="70" Margin="5"/>
+    </StackPanel>
+    <StackPanel x:Name="stackCombo" Orientation="Vertical" HorizontalAlignment="Center">
+        <StackPanel Margin="10" Orientation="Horizontal" HorizontalAlignment="Center">
+            <ComboBox x:Name="ComboGame" Margin="10" Height="25" Width="200" Padding="3"></ComboBox>
+            
+        </StackPanel>
+        <StackPanel Margin="10" Orientation="Horizontal" HorizontalAlignment="Center">
+            <Button Content="Start" x:Name="btnStart" Height="30" Width="150" Margin="5"/>
+            <Button Content="Stop" x:Name="btnStop" Visibility='Collapsed' Height="30" Width="150" Margin="5"/>
+        </StackPanel>
+        <StackPanel x:Name="stackControls" Margin="10" Orientation="Horizontal" HorizontalAlignment="Center">
+            <Button Content="Settings" x:Name="btnEditGame" Height="25" Width="90" Margin="5"/>
+            <Button Content="New Game" x:Name="btnNewGame" Height="25" Width="90" Margin="5"/>
+            <Button x:Name="btnDelete" Content="Delete Game" Height="25" Width="90" Margin="5"/>
+        </StackPanel>
+    </StackPanel>
+
+    <StackPanel x:Name="stackEdit" Margin="10">
+
+        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+            <Label FontSize="25" Width="150" Height="50" Padding="3" Margin="5">Game Name</Label>
+            <TextBox x:Name="txtGameName" Width = "300" Height="25" Padding="3" Margin="5"/>
+        </StackPanel>
+
+        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+            <Label FontSize="25" Width="150" Height="50" Padding="3" Margin="5">Game Path's</Label>
+        </StackPanel>
+
+        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+            <Label Width="70" Height="25" Padding="3" Margin="5">Game Path</Label>
+            <TextBox x:Name="txtGamePath" Width = "300" Height="25" Padding="3" Margin="5"/>
+            <Button x:Name="btnBrowseGame" Content="Browse" Height="25" Width="100" Margin="5"/>
+            <Label Width="35" Height="25" Padding="3" Margin="5">Args</Label>
+            <TextBox x:Name="txtGameArgs" Width = "150" Height="25" Padding="3" Margin="5"/>
+        </StackPanel>
+        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+            <Label Width="70" Height="25" Padding="3" Margin="5">App1 Path</Label>
+            <TextBox x:Name="txtAppPath1" Width = "300" Height="25" Padding="3" Margin="5"/>
+            <Button x:Name="btnBrowseApp1" Content="Browse" Height="25" Width="100" Margin="5"/>
+            
+            
+        </StackPanel>
+        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+            <Label Width="70" Height="25" Padding="3" Margin="5">App2 Path</Label>
+            <TextBox x:Name="txtAppPath2" Width = "300" Height="25" Padding="3" Margin="5"/>
+            <Button x:Name="btnBrowseApp2" Content="Browse" Height="25" Width="100" Margin="5"/>
+            
+            
+        </StackPanel>
+        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+            <Label Width="70" Height="25" Padding="3" Margin="5">App3 Path</Label>
+            <TextBox x:Name="txtAppPath3" Width = "300" Height="25" Padding="3" Margin="5"/>
+            <Button x:Name="btnBrowseApp3" Content="Browse" Height="25" Width="100" Margin="5"/>
+            
+            
+        </StackPanel>
+        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+            <Label Width="70" Height="25" Padding="3" Margin="5">App4 Path</Label>
+            <TextBox x:Name="txtAppPath4" Width = "300" Height="25" Padding="3" Margin="5"/>
+            <Button x:Name="btnBrowseApp4" Content="Browse" Height="25" Width="100" Margin="5"/>
+            
+            
+        </StackPanel>
+
+        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+            <Label FontSize="25" Width="150" Height="50" Padding="3" Margin="5">Joysticks</Label>
+        </StackPanel>
+
+        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+            <Label Width="70" Height="25" Padding="3" Margin="5">Joystick 1</Label>
+            <Label x:Name="lblJoy1" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
+            <Button x:Name="btnJoy1" Content="Select" Height="25" Width="100" Margin="5"/>
+        </StackPanel>
+        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+            <Label Width="70" Height="25" Padding="3" Margin="5">Joystick 2</Label>
+            <Label x:Name="lblJoy2" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
+            <Button x:Name="btnJoy2" Content="Select" Height="25" Width="100" Margin="5"/>
+        </StackPanel>
+        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+            <Label Width="70" Height="25" Padding="3" Margin="5">Joystick 3</Label>
+            <Label x:Name="lblJoy3" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
+            <Button x:Name="btnJoy3" Content="Select" Height="25" Width="100" Margin="5"/>
+        </StackPanel>
+        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+            <Label Width="70" Height="25" Padding="3" Margin="5">Joystick 4</Label>
+            <Label x:Name="lblJoy4" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
+            <Button x:Name="btnJoy4" Content="Select" Height="25" Width="100" Margin="5"/>
+        </StackPanel>
+
+        <StackPanel Margin="10" Orientation="Horizontal" HorizontalAlignment="Center">
+            <Button x:Name="btnSaveGame" Content="Save Game Config" Height="25" Width="110" Margin="5"/>
+            <Button x:Name="btnCancelEdit" Content="Cancel Edit" Height="25" Width="110" Margin="5"/>
+        </StackPanel>
+    </StackPanel>
+    <StackPanel Margin="5" VerticalAlignment="Bottom" HorizontalAlignment="Left">
+        <Label Width="200" Height="25" Padding="3" Margin="5">Copyright, Daniel Bailey 2023</Label>
+    </StackPanel>
+</StackPanel>
+
+</Window>
+"@
+$xmlAbout = @"
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="About"
+        Background="#66ffcc"
+        SizeToContent="WidthAndHeight"
+        MinHeight="200"
+        MinWidth="200"
+>
+<StackPanel Margin="30" Background="#f0f0f5">
+    <Label FontSize="14" FontWeight="Bold">Source</Label>
+    <TextBlock  Margin="10" FontSize="12" TextWrapping="WrapWithOverflow" MaxWidth="600">
+        Original source code can be found on github https://github.com/fireblad3/HOTAS-Launcher.
+    </TextBlock>
+    <Label FontSize="14" FontWeight="Bold">Purpose</Label>
+    <TextBlock Margin="10" FontSize="12" TextWrapping="WrapWithOverflow" MaxWidth="600">
+        I was getting frustrated with two things, first because I have 5 usb controllers my PC would not enter sleep
+        or standby modes, Disabling each one Manually when I finished playing was not an option.
+    </TextBlock>
+    <TextBlock Margin="10" FontSize="12" TextWrapping="WrapWithOverflow" MaxWidth="600">
+        Secondly, I found it very frustrating when I launched Star Citizen after re-plugging any
+        or all of my joysticks (or forgot to turn off my wheel after racing) and suddenly Star Citizen
+        would have re-organized my sticks and messed up all the mappings.
+    </TextBlock>
+    <TextBlock Margin="10" FontSize="12" TextWrapping="WrapWithOverflow" MaxWidth="600">
+        For me this application solves both of those issues and also allows me to launch other supporting programs such as
+        Transducer applications, Windowed Borderless Gaming, crew cheif etc and close them when I'm done with one simple button.
+    </TextBlock>
+    <Label FontSize="14" FontWeight="Bold">Copyright</Label>
+    <TextBlock Margin="10" FontSize="12" TextWrapping="WrapWithOverflow" MaxWidth="600">
+        Copyright (C) 2023  Daniel Bailey
+    </TextBlock>
+    <TextBlock Margin="10" FontSize="12" TextWrapping="WrapWithOverflow" MaxWidth="600">
+        This program is free software: you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+        the Free Software Foundation, either version 3 of the License, or
+        (at your option) any later version.
+    </TextBlock>
+    <TextBlock Margin="10" FontSize="12" TextWrapping="WrapWithOverflow" MaxWidth="600">
+        This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        GNU General Public License for more details.
+    </TextBlock>
+    <TextBlock Margin="10" FontSize="12" TextWrapping="WrapWithOverflow" MaxWidth="600">
+        You should have received a copy of the GNU General Public License
+        along with this program.  If not, see https://www.gnu.org/licenses/."
+    </TextBlock>
+    <Label FontSize="14" FontWeight="Bold">Dependencies</Label>
+    <TextBlock Margin="10" FontSize="12" TextWrapping="WrapWithOverflow" MaxWidth="600">
+        Optionally downloaded from the locations below by the application on first launch. 
+        These applications are not distributed or supported by me but can be found in the following locations.
+    </TextBlock>
+    <TextBlock Margin="5" FontSize="12" TextWrapping="WrapWithOverflow" MaxWidth="600">
+        Powershell Module CredentialManager - https://www.powershellgallery.com/packages/CredentialManager/2.0
+    </TextBlock>
+    <TextBlock Margin="5" FontSize="12" TextWrapping="WrapWithOverflow" MaxWidth="600">
+        usbdview - https://www.nirsoft.net/utils/
+    </TextBlock>
+</StackPanel>
+
+</Window>
+"@
+$xmlSplash = @"
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Game Picker"
+        Background="#66ffcc"
+        Width="500"
+        Height="200"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+>
+<StackPanel Margin="10" HorizontalAlignment="Center" VerticalAlignment="Center">
+    <Label FontSize="25" Content="Loading Game, Please Wait"></Label>
+</StackPanel>
+</Window>
+"@
+$xmlSplashpnpDevice = @"
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Game Picker"
+        Background="#66ffcc"
+        Width="500"
+        Height="200"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+>
+<StackPanel Margin="10" HorizontalAlignment="Center" VerticalAlignment="Center">
+    <Label FontSize="25" Content="Finding Available Joysticks, Please Wait"></Label>
+</StackPanel>
+</Window>
+"@
+
 # Import the Credential Manager this allows us to save some credentials so that the elevated window can launch the game as your standard user.
 if (Get-Module -ListAvailable -Name CredentialManager) {
     Import-Module CredentialManager
@@ -476,7 +698,7 @@ IF ($Settings.updatecheck) {
 }
 
 #Get the Joysticks now.
-$Joysticks = @(Get-Joysticks)
+$Joysticks = @(Get-Joysticks $xmlSplashpnpDevice)
 
 #Test if we have a Games.json file and create it if needed
 IF (Test-Path -Path $GamesJson){
@@ -491,9 +713,11 @@ $Script:Games = foreach($G in $Options.PsObject.Properties){
     $G.Name
 }
 
+
 #Create the main Window
 
-$Window = Import-Xaml "Main.xaml"
+#$Window = Import-Xaml "Main.xaml"
+$Window = Import-Xaml -xvar $xmlMain
 
 #Bind some stack Panels so we can hide them as needed and Hide the edit panel
 $stackEdit = $Window.FindName('stackEdit')
@@ -543,7 +767,7 @@ $txtGameArgs = $Window.FindName('txtGameArgs')
 #Assign bindings for some buttons and click actions for them
 $btnAbout = $Window.FindName('btnAbout')
 $btnAbout.Add_Click({
-    $About = Import-Xaml "About.xaml"
+    $About = Import-Xaml -xvar $xmlAbout
     $About.ShowDialog()
 })
 $btnStart = $Window.FindName('btnStart')
@@ -559,7 +783,7 @@ $btnStart.Add_Click({
             #use the game selected from the combobox
             $Game = $ComboGame.SelectedItem
             #Start the game itself using the current game and preferences
-            Start-Game -Game $Game -Options $Options -Joysticks $Joysticks
+            Start-Game -Game $Game -Options $Options -Joysticks $Joysticks -xml $xmlSplash
             #Save the last game we have launched so that we can select it on next launch by default
             $Settings.lastGame = $Game
             $Settings | ConvertTo-Json | Out-File -FilePath $SettingsPath
