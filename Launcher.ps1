@@ -29,6 +29,9 @@ Version 1.0.0.1-alpha -     Updated Description
                             Added auto check for updates feature
 Version 1.0.0.2-alpha -     Fixed bug causing version to always be out of date.
 
+Version 1.0.0.3-alpha -     Removed wait from game launch so that the app window is not locked up while the game is running, it was no longer automating the closure of apps etc anyway.
+                            
+
 #>
 param(
 [switch]$Elevated
@@ -314,9 +317,9 @@ Function Start-Game {
 
                 Write-Host "Starting $Game"
                 IF ($Options.$Game.arg1) {
-                    Start-Process -FilePath $Options.$Game.GamePath -Wait -ArgumentList $Options.$Game.Arg1 -Credential $Creds
+                    Start-Process -FilePath $Options.$Game.GamePath -ArgumentList $Options.$Game.Arg1 -Credential $Creds
                 } Else {
-                    Start-Process -FilePath $Options.$Game.GamePath -Wait -Credential $Creds
+                    Start-Process -FilePath $Options.$Game.GamePath -Credential $Creds
                 }
                 $Splash.Close()
             }
