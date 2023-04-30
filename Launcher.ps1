@@ -23,14 +23,14 @@ Dependencies: (optionally downloaded by the application on first launch). These 
 Updates:
 Version v1.0-alpha -        Released 20/04/2023
 
-Version 1.0.0.1-alpha -     Updated Description
+Version v1.0.0.1-alpha -     Updated Description
                             Update to handling credentials if user does not want to install CredentialManager module
                             Updated comments
                             Added About Window with License info etc
                             Added auto check for updates feature
-Version 1.0.0.2-alpha -     Fixed bug causing version to always be out of date.
+Version v1.0.0.2-alpha -     Fixed bug causing version to always be out of date.
 
-Version 1.0.0.3-alpha -     Removed wait from game launch so that the app window is not locked up while the game is running, it was no longer automating the closure of apps etc anyway.
+Version v1.0.0.3-alpha -    Removed wait from game launch so that the app window is not locked up while the game is running, it was no longer automating the closure of apps etc anyway.
                             Converted all xml to variables within the main script and modified Import-Xaml to accept a variable or a file using params to enable use of a file while testing or coding the xaml (for formatting help)
                             Add functioning all on and all off buttons to main form utilizing all unique sticks from the various game configs.
 
@@ -38,7 +38,7 @@ Version 1.0.0.3-alpha -     Removed wait from game launch so that the app window
 param(
 [switch]$Elevated
 )
-$version = "v1.0.0.2-alpha"
+$version = "v1.0.0.3-alpha"
 
 function Import-Xaml {
     
