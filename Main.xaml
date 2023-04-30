@@ -20,11 +20,18 @@
             <Button Content="Start" x:Name="btnStart" Height="30" Width="150" Margin="5"/>
             <Button Content="Stop" x:Name="btnStop" Visibility='Collapsed' Height="30" Width="150" Margin="5"/>
         </StackPanel>
-        <StackPanel x:Name="stackControls" Margin="10" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Button Content="Settings" x:Name="btnEditGame" Height="25" Width="90" Margin="5"/>
-            <Button Content="New Game" x:Name="btnNewGame" Height="25" Width="90" Margin="5"/>
-            <Button x:Name="btnDelete" Content="Delete Game" Height="25" Width="90" Margin="5"/>
+        <StackPanel x:Name="stackControls" Margin="10" Orientation="Vertical" HorizontalAlignment="Center">
+            <StackPanel Margin="10" Orientation="Horizontal" HorizontalAlignment="Center">
+                <Button Content="Settings" x:Name="btnEditGame" Height="25" Width="90" Margin="5"/>
+                <Button Content="New Game" x:Name="btnNewGame" Height="25" Width="90" Margin="5"/>
+                <Button x:Name="btnDelete" Content="Delete Game" Height="25" Width="90" Margin="5"/>
+            </StackPanel>
+            <StackPanel Margin="10" Orientation="Horizontal" HorizontalAlignment="Center">
+                <Button Content="All On" x:Name="btnAllOn" Height="25" Width="90" Margin="5"/>
+                <Button Content="All Off" x:Name="btnAllOff" Height="25" Width="90" Margin="5"/>
+            </StackPanel>
         </StackPanel>
+        
     </StackPanel>
 
     <StackPanel x:Name="stackEdit" Margin="10">

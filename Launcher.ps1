@@ -32,6 +32,7 @@ Version 1.0.0.2-alpha -     Fixed bug causing version to always be out of date.
 
 Version 1.0.0.3-alpha -     Removed wait from game launch so that the app window is not locked up while the game is running, it was no longer automating the closure of apps etc anyway.
                             Converted all xml to variables within the main script and modified Import-Xaml to accept a variable or a file using params to enable use of a file while testing or coding the xaml (for formatting help)
+                            Add functioning all on and all off buttons to main form utilizing all unique sticks from the various game configs.
 
 #>
 param(
@@ -397,6 +398,46 @@ Function Show-Message {
     $Result
 }
 
+Function Switch-All {
+    Param(
+        $Joysticks,
+        $Options,
+        [Switch]$On,
+        [Switch]$Off
+    )
+    
+    $All = @()
+    Foreach($G in $Options.PsObject.Properties) {
+        $Game = $G.Name
+        foreach($item in $Options.$Game.Selections.PsObject.Properties) {
+            $i = $Item.value
+            IF ($Null -ne $i -and $i -ne $False){ 
+                $all += $i
+            }
+        }
+    }
+    $all = $all | Sort-Object -Unique
+
+    IF ($On) {
+        Write-Host "Turn it all On"
+        ForEach ($Selection in $All) {
+            $Stick = $Joysticks | Where-Object {$_.Name -eq $Selection}
+            $SelectedStick = $Stick.ID
+            Start-Process -FilePath $Path -ArgumentList "/RunAsAdmin /enable $SelectedStick"
+            Timeout /T 5
+        }
+    }
+    IF ($Off) {
+        Write-Host "Turn it all Off"
+        ForEach ($Selection in $All) {
+            $Stick = $Joysticks | Where-Object {$_.Name -eq $Selection}
+            $SelectedStick = $Stick.ID
+            Write-Host $Stick.ID
+            Start-Process -FilePath $Path -ArgumentList "/RunAsAdmin /disable $SelectedStick"
+        }
+    }
+}
+
 # Check that we are running as admin and restart if we aren't(this only works when run as a .ps1, the exe has to be launched as administrator)
 $myScript = $myinvocation.mycommand.definition
 $null = Test-Admin -MyScript "$Myscript"
@@ -425,11 +466,18 @@ $xmlMain = @"
             <Button Content="Start" x:Name="btnStart" Height="30" Width="150" Margin="5"/>
             <Button Content="Stop" x:Name="btnStop" Visibility='Collapsed' Height="30" Width="150" Margin="5"/>
         </StackPanel>
-        <StackPanel x:Name="stackControls" Margin="10" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Button Content="Settings" x:Name="btnEditGame" Height="25" Width="90" Margin="5"/>
-            <Button Content="New Game" x:Name="btnNewGame" Height="25" Width="90" Margin="5"/>
-            <Button x:Name="btnDelete" Content="Delete Game" Height="25" Width="90" Margin="5"/>
+        <StackPanel x:Name="stackControls" Margin="10" Orientation="Vertical" HorizontalAlignment="Center">
+            <StackPanel Margin="10" Orientation="Horizontal" HorizontalAlignment="Center">
+                <Button Content="Settings" x:Name="btnEditGame" Height="25" Width="90" Margin="5"/>
+                <Button Content="New Game" x:Name="btnNewGame" Height="25" Width="90" Margin="5"/>
+                <Button x:Name="btnDelete" Content="Delete Game" Height="25" Width="90" Margin="5"/>
+            </StackPanel>
+            <StackPanel Margin="10" Orientation="Horizontal" HorizontalAlignment="Center">
+                <Button Content="All On" x:Name="btnAllOn" Height="25" Width="90" Margin="5"/>
+                <Button Content="All Off" x:Name="btnAllOff" Height="25" Width="90" Margin="5"/>
+            </StackPanel>
         </StackPanel>
+        
     </StackPanel>
 
     <StackPanel x:Name="stackEdit" Margin="10">
@@ -808,6 +856,16 @@ $btnStop.Add_Click({
         Stop-Game -Game $Game -Options $Options -Joysticks $Joysticks
         
     }
+})
+
+$btnAllOn = $Window.FindName('btnAllOn')
+$btnAllOn.Add_Click({
+    Switch-All -Joysticks $Joysticks -Options $Options -On
+})
+
+$btnAllOff = $Window.FindName('btnAllOff')
+$btnAllOff.Add_Click({
+    Switch-All -Joysticks $Joysticks -Options $Options -Off
 })
 
 #Populate the file path textboxes using a file picker
