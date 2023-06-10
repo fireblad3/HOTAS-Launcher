@@ -20,25 +20,38 @@ Dependencies: (optionally downloaded by the application on first launch). These 
 
 #>
 <#
+My Madness for versioning (Takes effect after the first release version at 1.0.0.0).
+A - Significant (> 25%) changes or additions in functionality or interface.
+B - small changes or additions in functionality or interface.
+C - minor changes.
+D - fixes to a build that do not change the interface or add new features.
+
 Updates:
-Version v1.0-alpha -        Released 20/04/2023
+v1.0-alpha     -    Released 20/04/2023
 
-Version v1.0.0.1-alpha -     Updated Description
-                            Update to handling credentials if user does not want to install CredentialManager module
-                            Updated comments
-                            Added About Window with License info etc
-                            Added auto check for updates feature
-Version v1.0.0.2-alpha -     Fixed bug causing version to always be out of date.
+v1.0.0.1-alpha -    Updated Description
+                    Update to handling credentials if user does not want to install CredentialManager module
+                    Updated comments
+                    Added About Window with License info etc
+                    Added auto check for updates feature
+v1.0.0.2-alpha -    Fixed bug causing version to always be out of date.
 
-Version v1.0.0.3-alpha -    Removed wait from game launch so that the app window is not locked up while the game is running, it was no longer automating the closure of apps etc anyway.
-                            Converted all xml to variables within the main script and modified Import-Xaml to accept a variable or a file using params to enable use of a file while testing or coding the xaml (for formatting help)
-                            Add functioning all on and all off buttons to main form utilizing all unique sticks from the various game configs.
+v1.0.0.3-alpha -    Removed wait from game launch so that the app window is not locked up while the game is running, it was no longer automating the closure of apps etc anyway.
+                    Converted all xml to variables within the main script and modified Import-Xaml to accept a variable or a file using params to enable use of a file while testing or coding the xaml (for formatting help)
+                    Add functioning all on and all off buttons to main form utilizing all unique sticks from the various game configs.
+
+v1.0.0.0 -  Added new button for launching the game only, this is handy when the game crashes or you run an update so you need to launch without the apps etc.
+            Updated Test-Admin to work for .exe as well as the usual .ps1. This removes the need for manually choosing to run the application as administrator.
+            Updated to using PS2EXE to compile my script as a .exe file. Added bonus of being able to put version and copyright info etc in the details of the .exe
+            Compiler.ps1 can be used to compile the script with everything pre-filled and pulls the current version from the script below.
+            First version I consider at full release, all initially planned features are now implemented.
+
 
 #>
 param(
 [switch]$Elevated
 )
-$version = "v1.0.0.3-alpha"
+$version = "v1.0.0.0"
 
 function Import-Xaml {
     
@@ -59,14 +72,12 @@ function Import-Xaml {
 	[Windows.Markup.XamlReader]::Load($xamlReader)
 }
 
-function Test-Admin{
+function Test-Admin {
     Param(
     [String]$myScript,
     [String]$elevated,
-    [String]$Game,
-    [switch]$allOff,
-    [switch]$allOn,
-    [switch]$test
+    [Switch]$test,
+    [Switch]$exe
     ) 
     $currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
     $Admin = $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
@@ -76,14 +87,12 @@ function Test-Admin{
             if ($elevated) {
                 Write-Warning -Message "tried to elevate, did not work, aborting"
             } else {
-                If ($allOff) {
-                    $Scriptpath =  "& '" + $myScript + "' -elevated -Game $Game -allOff" ; Start-Process powershell -Verb runAs -ArgumentList "$Scriptpath" ; exit
-                }
-                If ($allOn) {
-                    $Scriptpath =  "& '" + $myScript + "' -elevated -Game $Game -allOn" ; Start-Process powershell -Verb runAs -ArgumentList "$Scriptpath" ; exit
-                }
                 Write-Host "Launching As Admin"
-                $Scriptpath =  "& '" + $myScript + "' -elevated" ; Start-Process powershell -Verb runAs -ArgumentList "$Scriptpath" ; exit
+                IF ($exe.IsPresent) {
+                    $Arguments =  '-elevated' ; Start-Process $myscript -Verb runAs -ArgumentList "$Arguments" ; exit
+                } Else {
+                    $Scriptpath =  "& '" + $myScript + "' -elevated" ; Start-Process powershell -Verb runAs -WindowStyle Hidden -ArgumentList "$Scriptpath" ; exit
+                }
             }
         }
     }
@@ -286,7 +295,8 @@ Function Start-Game {
         [String]$Game,
         $Options,
         $Joysticks,
-        $xml
+        $xml,
+        [Switch]$NoApps
     )
 
     $Splash = Import-Xaml -xvar $xml
@@ -300,35 +310,37 @@ Function Start-Game {
         }
         
         # Turn it all On
-        ForEach ($Selection in $Selections) {
-            $Stick = $Joysticks | Where-Object {$_.Name -eq $Selection}
-            $SelectedStick = $Stick.ID
-            Write-Host $Stick.ID
-            Start-Process -FilePath $Path -ArgumentList "/RunAsAdmin /enable $SelectedStick"
-            Timeout /T 5
+        IF (!($NoApps)){
+            ForEach ($Selection in $Selections) {
+                $Stick = $Joysticks | Where-Object {$_.Name -eq $Selection}
+                $SelectedStick = $Stick.ID
+                Write-Host $Stick.ID
+                Start-Process -FilePath $Path -ArgumentList "/RunAsAdmin /enable $SelectedStick"
+                Timeout /T 5
+            }
         }
-
         
         # Start the Game
         IF ($Game) {
             IF ($Game -ne 'DEMO') {
-                IF ($Options.$Game.AppPath1){
-                Write-Host "Starting Aux app 1"
-                    $Script:App1 = Start-Process -FilePath $Options.$Game.AppPath1 -PassThru
+                IF (!($NoApps)) {
+                    IF ($Options.$Game.AppPath1){
+                    Write-Host "Starting Aux app 1"
+                        $Script:App1 = Start-Process -FilePath $Options.$Game.AppPath1 -PassThru
+                    }
+                    IF ($Options.$Game.AppPath2){
+                    Write-Host "Starting Aux app 2"
+                        $Script:App2 = Start-Process -FilePath $Options.$Game.AppPath2 -Credential $Creds -PassThru
+                    }
+                    IF ($Options.$Game.AppPath3){
+                    Write-Host "Starting Aux app 3"
+                        $Script:App3 = Start-Process -FilePath $Options.$Game.AppPath3 -Credential $Creds -PassThru
+                    }
+                    IF ($Options.$Game.AppPath4){
+                    Write-Host "Starting Aux app 4"
+                        $Script:App4 = Start-Process -FilePath $Options.$Game.AppPath4 -Credential $Creds -PassThru
+                    }
                 }
-                IF ($Options.$Game.AppPath2){
-                Write-Host "Starting Aux app 2"
-                    $Script:App2 = Start-Process -FilePath $Options.$Game.AppPath2 -Credential $Creds -PassThru
-                }
-                IF ($Options.$Game.AppPath3){
-                Write-Host "Starting Aux app 3"
-                    $Script:App3 = Start-Process -FilePath $Options.$Game.AppPath3 -Credential $Creds -PassThru
-                }
-                IF ($Options.$Game.AppPath4){
-                Write-Host "Starting Aux app 4"
-                    $Script:App4 = Start-Process -FilePath $Options.$Game.AppPath4 -Credential $Creds -PassThru
-                }
-
                 Write-Host "Starting $Game"
                 IF ($Options.$Game.arg1) {
                     Start-Process -FilePath $Options.$Game.GamePath -ArgumentList $Options.$Game.Arg1 -Credential $Creds
@@ -440,8 +452,13 @@ Function Switch-All {
 
 # Check that we are running as admin and restart if we aren't(this only works when run as a .ps1, the exe has to be launched as administrator)
 $myScript = $myinvocation.mycommand.definition
-$null = Test-Admin -MyScript "$Myscript"
-
+if ($myScript -like "*.ps1") {
+    Write-Host "Powershell"
+    $null = Test-Admin -MyScript "$Myscript"
+} Else {
+    Write-Host "EXE"
+    $null = Test-Admin -Myscript "$Myscript" -exe
+}
 #Set up the xml variables
 $xmlMain = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -464,6 +481,7 @@ $xmlMain = @"
         </StackPanel>
         <StackPanel Margin="10" Orientation="Horizontal" HorizontalAlignment="Center">
             <Button Content="Start" x:Name="btnStart" Height="30" Width="150" Margin="5"/>
+            <Button Content="Game Only" x:Name="btnStartGO" Height="30" Width="150" Margin="5"/>
             <Button Content="Stop" x:Name="btnStop" Visibility='Collapsed' Height="30" Width="150" Margin="5"/>
         </StackPanel>
         <StackPanel x:Name="stackControls" Margin="10" Orientation="Vertical" HorizontalAlignment="Center">
@@ -832,6 +850,28 @@ $btnStart.Add_Click({
             $Game = $ComboGame.SelectedItem
             #Start the game itself using the current game and preferences
             Start-Game -Game $Game -Options $Options -Joysticks $Joysticks -xml $xmlSplash
+            #Save the last game we have launched so that we can select it on next launch by default
+            $Settings.lastGame = $Game
+            $Settings | ConvertTo-Json | Out-File -FilePath $SettingsPath
+        }
+    } Catch {
+        Show-Message -Message "Game Settings invalid Please Fix your thing!"
+    }
+})
+$btnStartGO = $Window.FindName('btnStartGO')
+$btnStartGO.Add_Click({
+    Try {
+        IF ($ComboGame.SelectedItem -ne ' ') { #Only perform an action if a game is selected
+            # Set visibility to hidden on some items to prevent user from crashing the app... and show the stop button
+            $btnStart.Visibility = 'Collapsed'
+            $btnStop.Visibility = 'Visible'
+            $ComboGame.Visibility = 'Collapsed'
+            $StackControls.Visibility = 'Collapsed'
+            
+            #use the game selected from the combobox
+            $Game = $ComboGame.SelectedItem
+            #Start the game itself using the current game and preferences
+            Start-Game -Game $Game -Options $Options -Joysticks $Joysticks -xml $xmlSplash -NoApps
             #Save the last game we have launched so that we can select it on next launch by default
             $Settings.lastGame = $Game
             $Settings | ConvertTo-Json | Out-File -FilePath $SettingsPath
