@@ -1,7 +1,7 @@
 $ScriptContent = Get-Content -Path ".\Launcher.ps1"
 $Copyright = "Copyright (C) 2023  Daniel Bailey"
 $Icon = ".\joystick-256x256.ico"
-$Title = "HOTAS Launcher"
+$Title = "HOTAS.Launcher"
 $FileName = ".\$Title.exe"
 foreach ($line in $ScriptContent) {
     IF ($line -like '$version = *') {
