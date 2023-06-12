@@ -46,12 +46,13 @@ v1.0.0.0 -  Added new button for launching the game only, this is handy when the
             Compiler.ps1 can be used to compile the script with everything pre-filled and pulls the current version from the script below.
             First version I consider at full release, all initially planned features are now implemented.
 v1.0.0.1 -  Bugfix: When creating a new game config not selecting the blank entry insisted that you had not given the config a name.
-
+v1.0.1.0 -  Addition to current feature. Request from JSmith: support for up to 10 controllers.
+            Addition to current feature. Request from Vincent: removed Apostophie from Game Path's on Settings window.
 #>
 param(
 [switch]$Elevated
 )
-$version = "v1.0.0.1"
+$version = "v1.0.1.0"
 
 function Import-Xaml {
     
@@ -506,7 +507,7 @@ $xmlMain = @"
         </StackPanel>
 
         <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Label FontSize="25" Width="150" Height="50" Padding="3" Margin="5">Game Path's</Label>
+            <Label FontSize="25" Width="150" Height="50" Padding="3" Margin="5">Game Paths</Label>
         </StackPanel>
 
         <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
@@ -568,6 +569,36 @@ $xmlMain = @"
             <Label Width="70" Height="25" Padding="3" Margin="5">Joystick 4</Label>
             <Label x:Name="lblJoy4" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
             <Button x:Name="btnJoy4" Content="Select" Height="25" Width="100" Margin="5"/>
+        </StackPanel>
+        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+            <Label Width="70" Height="25" Padding="3" Margin="5">Joystick 5</Label>
+            <Label x:Name="lblJoy5" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
+            <Button x:Name="btnJoy5" Content="Select" Height="25" Width="100" Margin="5"/>
+        </StackPanel>
+        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+            <Label Width="70" Height="25" Padding="3" Margin="5">Joystick 6</Label>
+            <Label x:Name="lblJoy6" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
+            <Button x:Name="btnJoy6" Content="Select" Height="25" Width="100" Margin="5"/>
+        </StackPanel>
+        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+            <Label Width="70" Height="25" Padding="3" Margin="5">Joystick 7</Label>
+            <Label x:Name="lblJoy7" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
+            <Button x:Name="btnJoy7" Content="Select" Height="25" Width="100" Margin="5"/>
+        </StackPanel>
+        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+            <Label Width="70" Height="25" Padding="3" Margin="5">Joystick 8</Label>
+            <Label x:Name="lblJoy8" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
+            <Button x:Name="btnJoy8" Content="Select" Height="25" Width="100" Margin="5"/>
+        </StackPanel>
+        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+            <Label Width="70" Height="25" Padding="3" Margin="5">Joystick 9</Label>
+            <Label x:Name="lblJoy9" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
+            <Button x:Name="btnJoy9" Content="Select" Height="25" Width="100" Margin="5"/>
+        </StackPanel>
+        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+            <Label Width="70" Height="25" Padding="3" Margin="5">Joystick 10</Label>
+            <Label x:Name="lblJoy10" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
+            <Button x:Name="btnJoy10" Content="Select" Height="25" Width="100" Margin="5"/>
         </StackPanel>
 
         <StackPanel Margin="10" Orientation="Horizontal" HorizontalAlignment="Center">
@@ -828,6 +859,12 @@ $lblJoy1 = $Window.FindName('lblJoy1')
 $lblJoy2 = $Window.FindName('lblJoy2')
 $lblJoy3 = $Window.FindName('lblJoy3')
 $lblJoy4 = $Window.FindName('lblJoy4')
+$lblJoy5 = $Window.FindName('lblJoy5')
+$lblJoy6 = $Window.FindName('lblJoy6')
+$lblJoy7 = $Window.FindName('lblJoy7')
+$lblJoy8 = $Window.FindName('lblJoy8')
+$lblJoy9 = $Window.FindName('lblJoy9')
+$lblJoy10 = $Window.FindName('lblJoy10')
 $txtGameArgs = $Window.FindName('txtGameArgs')
 
 #Assign bindings for some buttons and click actions for them
@@ -955,6 +992,36 @@ $btnJoy4.Add_Click({
     $lblJoy4.Content = Get-Joystick -Joysticks $Joysticks
 })
 
+$btnJoy5 = $Window.FindName('btnJoy5')
+$btnJoy5.Add_Click({
+    $lblJoy5.Content = Get-Joystick -Joysticks $Joysticks
+})
+
+$btnJoy6 = $Window.FindName('btnJoy6')
+$btnJoy6.Add_Click({
+    $lblJoy6.Content = Get-Joystick -Joysticks $Joysticks
+})
+
+$btnJoy7 = $Window.FindName('btnJoy7')
+$btnJoy7.Add_Click({
+    $lblJoy7.Content = Get-Joystick -Joysticks $Joysticks
+})
+
+$btnJoy8 = $Window.FindName('btnJoy8')
+$btnJoy8.Add_Click({
+    $lblJoy8.Content = Get-Joystick -Joysticks $Joysticks
+})
+
+$btnJoy9 = $Window.FindName('btnJoy9')
+$btnJoy9.Add_Click({
+    $lblJoy9.Content = Get-Joystick -Joysticks $Joysticks
+})
+
+$btnJoy10 = $Window.FindName('btnJoy10')
+$btnJoy10.Add_Click({
+    $lblJoy10.Content = Get-Joystick -Joysticks $Joysticks
+})
+
 $btnSaveGame = $Window.FindName('btnSaveGame')
 $btnSaveGame.Add_Click({
     
@@ -982,6 +1049,12 @@ $btnSaveGame.Add_Click({
                 Stick2=$lblJoy2.Content
                 Stick3=$lblJoy3.Content
                 Stick4=$lblJoy4.Content
+                Stick5=$lblJoy5.Content
+                Stick6=$lblJoy6.Content
+                Stick7=$lblJoy7.Content
+                Stick8=$lblJoy8.Content
+                Stick9=$lblJoy9.Content
+                Stick10=$lblJoy10.Content
             }
         }
         #Add the object to $Options and overwrite if it already exists
