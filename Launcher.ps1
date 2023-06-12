@@ -48,11 +48,12 @@ v1.0.0.0 -  Added new button for launching the game only, this is handy when the
 v1.0.0.1 -  Bugfix: When creating a new game config not selecting the blank entry insisted that you had not given the config a name.
 v1.0.1.0 -  Addition to current feature. Request from JSmith: support for up to 10 controllers.
             Addition to current feature. Request from Vincent: removed Apostophie from Game Path's on Settings window.
+v1.0.1.1 -  Bugfix: Removed buggy line of code introduced while fixing the last bug....
 #>
 param(
 [switch]$Elevated
 )
-$version = "v1.0.1.0"
+$version = "v1.0.1.1"
 
 function Import-Xaml {
     
@@ -1027,11 +1028,10 @@ $btnSaveGame.Add_Click({
     
     #use the game
     $SelectedGame = ($Window.FindName('ComboGame')).SelectedItem
-    Show-Message -Message $SlectedGame
     IF ($SelectedGame -ne " "){ #If we have selected a game and changed the name remove the old one
         if ($SelectedGame -ne $txtGameName.Text) {
             $Options.psobject.properties.remove($SelectedGame)
-        } 
+        }
     }
     
     Try {
