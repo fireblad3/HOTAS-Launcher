@@ -45,13 +45,13 @@ v1.0.0.0 -  Added new button for launching the game only, this is handy when the
             Updated to using PS2EXE to compile my script as a .exe file. Added bonus of being able to put version and copyright info etc in the details of the .exe
             Compiler.ps1 can be used to compile the script with everything pre-filled and pulls the current version from the script below.
             First version I consider at full release, all initially planned features are now implemented.
-
+v1.0.0.1 -  Bugfix: When creating a new game config not selecting the blank entry insisted that you had not given the config a name.
 
 #>
 param(
 [switch]$Elevated
 )
-$version = "v1.0.0.0"
+$version = "v1.0.0.1"
 
 function Import-Xaml {
     
@@ -957,15 +957,17 @@ $btnJoy4.Add_Click({
 
 $btnSaveGame = $Window.FindName('btnSaveGame')
 $btnSaveGame.Add_Click({
+    
+    #use the game
+    $SelectedGame = ($Window.FindName('ComboGame')).SelectedItem
+    Show-Message -Message $SlectedGame
+    IF ($SelectedGame -ne " "){ #If we have selected a game and changed the name remove the old one
+        if ($SelectedGame -ne $txtGameName.Text) {
+            $Options.psobject.properties.remove($SelectedGame)
+        } 
+    }
+    
     Try {
-        #use the game
-        $SelectedGame = ($Window.FindName('ComboGame')).SelectedItem
-        
-        IF ($SelectedGame -ne " "){ #If we have selected a game and changed the name remove the old one
-            if ($SelectedGame -ne $txtGameName.Text) {
-                $Options.psobject.properties.remove($SelectedGame)
-            } 
-        }
         #Create the object with all the properties needed for each game config and assign values from the text boxes
         $GameObject = [PSCustomObject]@{
             Name = $txtGameName.Text
@@ -996,7 +998,7 @@ $btnSaveGame.Add_Click({
         $stackEdit.Visibility= "Collapsed"
         $stackCombo.Visibility = "Visible"
     } Catch {
-        Show-Message -Message "Please ensure you give your game a name"
+        Show-Message -Message "Please give your game a name"
     }
 })
 
