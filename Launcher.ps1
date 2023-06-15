@@ -57,11 +57,12 @@ v1.0.2.0 -  Implemented Tooltips
             Added "Clear blacklist button"
             Moved Settings, new game, Delete Game into file menu and renamed to config...
 v1.0.2.1 -  Fixed a couple minor bugs introduced in last patch that only showed up when running the compiled version.
+v1.0.2.2 -  Ditto
 #>
 param(
 [switch]$Elevated
 )
-$version = "v1.0.2.1"
+$version = "v1.0.2.2"
 function Import-Xaml {
     
     Param(
@@ -1289,4 +1290,3 @@ $btnDelete.Add_Click({
 })
 #Show the window
 $Window.ShowDialog() | Out-Null
-Pause
