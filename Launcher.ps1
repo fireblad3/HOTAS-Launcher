@@ -56,11 +56,12 @@ v1.0.2.0 -  Implemented Tooltips
             Added "Add to blacklist" button when adding a controller, this removes it from the list and adds the device to a blacklist in settings. Also running Get-Joysticks (done every startup) Adds a default blacklist if it does not exist in settings.
             Added "Clear blacklist button"
             Moved Settings, new game, Delete Game into file menu and renamed to config...
+v1.0.2.1 -  Fixed a couple minor bugs introduced in last patch that only showed up when running the compiled version.
 #>
 param(
 [switch]$Elevated
 )
-$version = "v1.0.2.0"
+$version = "v1.0.2.1"
 function Import-Xaml {
     
     Param(
@@ -304,7 +305,6 @@ Function Get-Joystick {
         }
         $Settings | ConvertTo-Json | Out-File -FilePath "$MyAppData\Settings.json"
         $Script:Joysticks = $Joysticks | Where-Object { $_.Name -notMatch ($x) }
-        $form.reload()
     }
     $form.Controls.Add($blButton)
 
@@ -499,7 +499,7 @@ Function Switch-All {
     }
 }
 
-# Check that we are running as admin and restart if we aren't(this only works when run as a .ps1, the exe has to be launched as administrator)
+# Check that we are running as admin and restart if we aren't
 $myScript = $myinvocation.mycommand.definition
 if ($myScript -like "*.ps1") {
     $null = Test-Admin -MyScript "$Myscript"
@@ -944,7 +944,8 @@ $btnClearBlacklist.Add_Click({
         if ($myScript -like "*.ps1") {
             $null = Test-Admin -MyScript "$Myscript" -restart
         } Else {
-            $null = Test-Admin -Myscript "$Myscript" -restart -exe
+            Show-Message -Message "Unable to re-launch Please Launch Hotas Launcher Manually"
+            #$null = Test-Admin -Myscript "$Myscript" -restart -exe
         }
     }
 })
