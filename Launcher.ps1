@@ -49,12 +49,18 @@ v1.0.0.1 -  Bugfix: When creating a new game config not selecting the blank entr
 v1.0.1.0 -  Addition to current feature. Request from JSmith: support for up to 10 controllers.
             Addition to current feature. Request from Vincent: removed Apostophie from Game Path's on Settings window.
 v1.0.1.1 -  Bugfix: Removed buggy line of code introduced while fixing the last bug....
+v1.0.2.0 -  Implemented Tooltips
+            Added loading screen for turning all controllers on.
+            Updated wording on splash screen
+            Updated wording throughout the app to use Game Controller or Controller instead of Joysticks, seems more appropriate considering button boxes, stearing wheels etc.
+            Added "Add to blacklist" button when adding a controller, this removes it from the list and adds the device to a blacklist in settings. Also running Get-Joysticks (done every startup) Adds a default blacklist if it does not exist in settings.
+            Added "Clear blacklist button"
+            Moved Settings, new game, Delete Game into file menu and renamed to config...
 #>
 param(
 [switch]$Elevated
 )
-$version = "v1.0.1.1"
-
+$version = "v1.0.2.0"
 function Import-Xaml {
     
     Param(
@@ -79,12 +85,13 @@ function Test-Admin {
     [String]$myScript,
     [String]$elevated,
     [Switch]$test,
-    [Switch]$exe
+    [Switch]$exe,
+    [Switch]$restart
     ) 
     $currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
     $Admin = $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
     #$currentUser
-    IF ($Admin -ne $true) {
+    IF ($Admin -ne $true -or $restart -eq $true) {
         IF ($test -eq $false) {
             if ($elevated) {
                 Write-Warning -Message "tried to elevate, did not work, aborting"
@@ -115,6 +122,12 @@ Function Set-Config {
                 Stick2= $null
                 Stick3= $null
                 Stick4= $null
+                Stick5= $null
+                Stick6= $null
+                Stick7= $null
+                Stick8= $null
+                Stick9= $null
+                Stick10= $null
             }
         }
 
@@ -164,32 +177,41 @@ Function Set-Settings {
     $Settings
 }
 
-Function Get-Joysticks {
+Function Set-Blacklist{
     Param(
-        $xml
+        $Settings
     )
-    
-    $SplashPnpDevice = Import-Xaml -xvar $xml
-    $SplashPnpDevice.Add_ContentRendered({
-        $output = Get-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -match '^USB'}
-        $output = $output | Where-Object {$_.FriendlyName -notmatch 'Hub'  } 
-        #$output = $output | Where-Object {$_.FriendlyName -notmatch 'USB Audio'}
-       
-        #$output = $output | Where-Object {$_.FriendlyName -notmatch 'Receiver'}
-        #$output = $output | Where-Object {$_.FriendlyName -notmatch 'ButtKicker'}
-        #$output = $output | Where-Object {$_.FriendlyName -notmatch 'USB Receiver'}
-
-        $output = $output | Where-Object {$_.Class -notmatch 'Image' -and $_.Class -notmatch 'Media' -and $_.Class -notmatch 'Bluetooth' -and $_.Class -notmatch 'DiskDrive' -and $_.Class -notmatch 'USBDevice'}
-        $Script:Sticks = @()
-        $filter = @(
+    $Settings.psobject.properties.remove('Blacklist')
+    $blacklist = @(
                 'Receiver',
-                'LianLi',
                 'USB',
                 'ITE Device',
                 'ButtKicker',
                 'Mic',
                 'WebCam'
             )
+            $Settings | Add-Member -NotePropertyName "blacklist" -NotePropertyValue @($blacklist)
+            $Settings | ConvertTo-Json | Out-File -FilePath "$MyAppData\Settings.json"
+            $Script:Settings = $Settings
+            $Settings
+}
+
+Function Get-Joysticks {
+    Param(
+        $xml,
+        $Settings
+    )
+    
+    $SplashPnpDevice = Import-Xaml -xvar $xml
+    $SplashPnpDevice.Add_ContentRendered({
+        $output = Get-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -match '^USB'}
+        $output = $output | Where-Object {$_.FriendlyName -notmatch 'Hub'  } 
+        $output = $output | Where-Object {$_.Class -notmatch 'Image' -and $_.Class -notmatch 'Media' -and $_.Class -notmatch 'Bluetooth' -and $_.Class -notmatch 'DiskDrive' -and $_.Class -notmatch 'USBDevice'}
+        $Script:Sticks = @()
+        IF ($null -eq $Settings.blacklist) {
+            $Settings = Set-Blacklist -Settings $Settings
+        }
+        $filter = @($Settings.blacklist)
         foreach ($stick in $output) {
             $filterMatch = $false
             $stickId = $stick.InstanceId
@@ -226,13 +248,15 @@ Function Get-Joysticks {
 
 Function Get-Joystick {
     param(
-        $Joysticks
+        $Joysticks,
+        $Settings,
+        $MyAppData
     )
     Add-Type -AssemblyName System.Windows.Forms
     Add-Type -AssemblyName System.Drawing
 
     $form = New-Object System.Windows.Forms.Form
-    $form.Text = 'Select a Joystick'
+    $form.Text = 'Select a Controller'
     $form.Size = New-Object System.Drawing.Size(500,500)
     $form.StartPosition = 'CenterScreen'
 
@@ -258,22 +282,35 @@ Function Get-Joystick {
     $label = New-Object System.Windows.Forms.Label
     $label.Location = New-Object System.Drawing.Point(10,20)
     $label.Size = New-Object System.Drawing.Size(280,20)
-    $label.Text = 'Please select a joystick and click copy:'
+    $label.Text = 'Please select a Controller and click Add or add to blacklist:'
     $form.Controls.Add($label)
 
     $listBox = New-Object System.Windows.Forms.ListBox
-    $listBox.Location = New-Object System.Drawing.Point(10,40)
+    $listBox.Location = New-Object System.Drawing.Point(10,60)
     $listBox.Size = New-Object System.Drawing.Size(400,350)
 
-
-
+    $blButton = New-Object System.Windows.Forms.Button
+    $blButton.Location = New-Object System.Drawing.Point(250,425)
+    $blButton.Size = New-Object System.Drawing.Size(100,23)
+    $blButton.Text = 'Add to Blacklist'
+    $blButton.DialogResult = [System.Windows.Forms.DialogResult]::Abort
+    $blButton.Add_Click{
+        $x = $listBox.SelectedItem
+        $listBox.Items.Remove($x)
+        Try {
+            $Settings.blacklist += $x 
+        } Catch {
+            $Settings | Add-Member -NotePropertyName "blacklist" -NotePropertyValue @($x)
+        }
+        $Settings | ConvertTo-Json | Out-File -FilePath "$MyAppData\Settings.json"
+        $Script:Joysticks = $Joysticks | Where-Object { $_.Name -notMatch ($x) }
+        $form.reload()
+    }
+    $form.Controls.Add($blButton)
 
     $sticks = foreach($item in $Joysticks){
-            $Item.Name
-            #Add-Member -in $item.value -NotePropertyName 'Name' -NotePropertyValue $item.Name –PassThru
-        }
-
-
+        $Item.Name
+    }
     Foreach ($stick in $sticks ) {
         [void] $listBox.Items.Add($stick)
     }
@@ -287,7 +324,13 @@ Function Get-Joystick {
     if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
         $x
     } Else {
-        $false
+        if ($result -eq [System.Windows.Forms.DialogResult]::Cancel){
+            $null
+        } Else {
+            $false
+        }
+        
+        #$false
     }
     
 }
@@ -417,7 +460,8 @@ Function Switch-All {
         $Joysticks,
         $Options,
         [Switch]$On,
-        [Switch]$Off
+        [Switch]$Off,
+        $xml
     )
     
     $All = @()
@@ -433,16 +477,19 @@ Function Switch-All {
     $all = $all | Sort-Object -Unique
 
     IF ($On) {
-        Write-Host "Turn it all On"
-        ForEach ($Selection in $All) {
-            $Stick = $Joysticks | Where-Object {$_.Name -eq $Selection}
-            $SelectedStick = $Stick.ID
-            Start-Process -FilePath $Path -ArgumentList "/RunAsAdmin /enable $SelectedStick"
-            Timeout /T 5
-        }
+        $Splash = Import-Xaml -xvar $xml
+        $Splash.Add_ContentRendered({
+            ForEach ($Selection in $All) {
+                $Stick = $Joysticks | Where-Object {$_.Name -eq $Selection}
+                $SelectedStick = $Stick.ID
+                Start-Process -FilePath $Path -ArgumentList "/RunAsAdmin /enable $SelectedStick"
+                Timeout /T 5
+            }
+            $Splash.Close()
+        })
+        $Splash.ShowDialog() | Out-Null
     }
     IF ($Off) {
-        Write-Host "Turn it all Off"
         ForEach ($Selection in $All) {
             $Stick = $Joysticks | Where-Object {$_.Name -eq $Selection}
             $SelectedStick = $Stick.ID
@@ -455,10 +502,8 @@ Function Switch-All {
 # Check that we are running as admin and restart if we aren't(this only works when run as a .ps1, the exe has to be launched as administrator)
 $myScript = $myinvocation.mycommand.definition
 if ($myScript -like "*.ps1") {
-    Write-Host "Powershell"
     $null = Test-Admin -MyScript "$Myscript"
 } Else {
-    Write-Host "EXE"
     $null = Test-Admin -Myscript "$Myscript" -exe
 }
 #Set up the xml variables
@@ -469,32 +514,45 @@ $xmlMain = @"
         Background="#66ffcc"
         SizeToContent="WidthAndHeight"
         MinHeight="300"
-        MinWidth="300"
->
+        MinWidth="300">
+
 <StackPanel>
-    <StackPanel HorizontalAlignment="right" Orientation="Horizontal">
-        <CheckBox x:Name="chkVersion" Content="Check for updates on startup?"/>
-        <Button Content="About" x:Name="btnAbout" Height="30" Width="70" Margin="5"/>
-    </StackPanel>
+<DockPanel>
+    <Menu DockPanel.Dock="Top">
+        <MenuItem Header="_File">
+            <MenuItem Header="_Change Config" x:Name="btnEditGame" />
+            <MenuItem Header="_New Config" x:Name="btnNewGame" />
+            <Separator />
+            <MenuItem Header="_Delete Config" x:Name="btnDelete" />
+            <MenuItem Header="_Clear Blacklist" x:Name="btnClearBlacklist" />
+            
+        </MenuItem>
+        <MenuItem Header="_Help">
+            <MenuItem Header="Check for Updates on Startup" x:Name="chkVersion" IsCheckable="True" />
+            <MenuItem Header="_About" x:Name="btnAbout" />
+        </MenuItem>
+    </Menu>
+    <StackPanel></StackPanel>
+</DockPanel>
     <StackPanel x:Name="stackCombo" Orientation="Vertical" HorizontalAlignment="Center">
         <StackPanel Margin="10" Orientation="Horizontal" HorizontalAlignment="Center">
-            <ComboBox x:Name="ComboGame" Margin="10" Height="25" Width="200" Padding="3"></ComboBox>
+            <ComboBox x:Name="ComboGame" ToolTip="Select a Config" Margin="10" Height="25" Width="200" Padding="3"></ComboBox>
             
         </StackPanel>
         <StackPanel Margin="10" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Button Content="Start" x:Name="btnStart" Height="30" Width="150" Margin="5"/>
-            <Button Content="Game Only" x:Name="btnStartGO" Height="30" Width="150" Margin="5"/>
-            <Button Content="Stop" x:Name="btnStop" Visibility='Collapsed' Height="30" Width="150" Margin="5"/>
+            <Button Content="Start" x:Name="btnStart" ToolTip="Start Game and enable selected controllers" Height="30" Width="150" Margin="5"/>
+            <Button Content="Game Only" x:Name="btnStartGO" ToolTip="Launch the game without controllers" Height="30" Width="150" Margin="5"/>
+            <Button Content="Stop" x:Name="btnStop" ToolTip="Stop the game and disable controllers" Visibility='Collapsed' Height="30" Width="150" Margin="5"/>
         </StackPanel>
         <StackPanel x:Name="stackControls" Margin="10" Orientation="Vertical" HorizontalAlignment="Center">
             <StackPanel Margin="10" Orientation="Horizontal" HorizontalAlignment="Center">
-                <Button Content="Settings" x:Name="btnEditGame" Height="25" Width="90" Margin="5"/>
-                <Button Content="New Game" x:Name="btnNewGame" Height="25" Width="90" Margin="5"/>
-                <Button x:Name="btnDelete" Content="Delete Game" Height="25" Width="90" Margin="5"/>
+                
+                
+                
             </StackPanel>
             <StackPanel Margin="10" Orientation="Horizontal" HorizontalAlignment="Center">
-                <Button Content="All On" x:Name="btnAllOn" Height="25" Width="90" Margin="5"/>
-                <Button Content="All Off" x:Name="btnAllOff" Height="25" Width="90" Margin="5"/>
+                <Button Content="All On" x:Name="btnAllOn" ToolTip="Turn on all controllers from all configurations" Height="25" Width="90" Margin="5"/>
+                <Button Content="All Off" x:Name="btnAllOff" ToolTip="Turn off all controllers from all configurations" Height="25" Width="90" Margin="5"/>
             </StackPanel>
         </StackPanel>
         
@@ -514,97 +572,97 @@ $xmlMain = @"
         <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
             <Label Width="70" Height="25" Padding="3" Margin="5">Game Path</Label>
             <TextBox x:Name="txtGamePath" Width = "300" Height="25" Padding="3" Margin="5"/>
-            <Button x:Name="btnBrowseGame" Content="Browse" Height="25" Width="100" Margin="5"/>
+            <Button x:Name="btnBrowseGame" Content="Browse" ToolTip="Select Game executable/launcher" Height="25" Width="100" Margin="5"/>
             <Label Width="35" Height="25" Padding="3" Margin="5">Args</Label>
             <TextBox x:Name="txtGameArgs" Width = "150" Height="25" Padding="3" Margin="5"/>
         </StackPanel>
         <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
             <Label Width="70" Height="25" Padding="3" Margin="5">App1 Path</Label>
             <TextBox x:Name="txtAppPath1" Width = "300" Height="25" Padding="3" Margin="5"/>
-            <Button x:Name="btnBrowseApp1" Content="Browse" Height="25" Width="100" Margin="5"/>
+            <Button x:Name="btnBrowseApp1" Content="Browse" ToolTip="Browse to select Optional support app 1" Height="25" Width="100" Margin="5"/>
             
             
         </StackPanel>
         <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
             <Label Width="70" Height="25" Padding="3" Margin="5">App2 Path</Label>
             <TextBox x:Name="txtAppPath2" Width = "300" Height="25" Padding="3" Margin="5"/>
-            <Button x:Name="btnBrowseApp2" Content="Browse" Height="25" Width="100" Margin="5"/>
+            <Button x:Name="btnBrowseApp2" Content="Browse" ToolTip="Browse to select Optional support app 2" Height="25" Width="100" Margin="5"/>
             
             
         </StackPanel>
         <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
             <Label Width="70" Height="25" Padding="3" Margin="5">App3 Path</Label>
             <TextBox x:Name="txtAppPath3" Width = "300" Height="25" Padding="3" Margin="5"/>
-            <Button x:Name="btnBrowseApp3" Content="Browse" Height="25" Width="100" Margin="5"/>
+            <Button x:Name="btnBrowseApp3" Content="Browse" ToolTip="Browse to select Optional support app 3" Height="25" Width="100" Margin="5"/>
             
             
         </StackPanel>
         <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
             <Label Width="70" Height="25" Padding="3" Margin="5">App4 Path</Label>
             <TextBox x:Name="txtAppPath4" Width = "300" Height="25" Padding="3" Margin="5"/>
-            <Button x:Name="btnBrowseApp4" Content="Browse" Height="25" Width="100" Margin="5"/>
+            <Button x:Name="btnBrowseApp4" Content="Browse" ToolTip="Browse to select Optional support app 4" Height="25" Width="100" Margin="5"/>
             
             
         </StackPanel>
 
         <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Label FontSize="25" Width="150" Height="50" Padding="3" Margin="5">Joysticks</Label>
+            <Label FontSize="25" Width="250" Height="50" Padding="3" Margin="5">Game Controllers</Label>
         </StackPanel>
 
         <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Label Width="70" Height="25" Padding="3" Margin="5">Joystick 1</Label>
+            <Label Width="75" Height="25" Padding="3" Margin="5">Controller 1</Label>
             <Label x:Name="lblJoy1" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
-            <Button x:Name="btnJoy1" Content="Select" Height="25" Width="100" Margin="5"/>
+            <Button x:Name="btnJoy1" Content="Select" ToolTip="Browse to select Controller 1" Height="25" Width="100" Margin="5"/>
         </StackPanel>
         <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Label Width="70" Height="25" Padding="3" Margin="5">Joystick 2</Label>
+            <Label Width="75" Height="25" Padding="3" Margin="5">Controller 2</Label>
             <Label x:Name="lblJoy2" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
-            <Button x:Name="btnJoy2" Content="Select" Height="25" Width="100" Margin="5"/>
+            <Button x:Name="btnJoy2" Content="Select" ToolTip="Browse to select Controller 2" Height="25" Width="100" Margin="5"/>
         </StackPanel>
         <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Label Width="70" Height="25" Padding="3" Margin="5">Joystick 3</Label>
+            <Label Width="75" Height="25" Padding="3" Margin="5">Controller 3</Label>
             <Label x:Name="lblJoy3" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
-            <Button x:Name="btnJoy3" Content="Select" Height="25" Width="100" Margin="5"/>
+            <Button x:Name="btnJoy3" Content="Select" ToolTip="Browse to select Controller 3" Height="25" Width="100" Margin="5"/>
         </StackPanel>
         <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Label Width="70" Height="25" Padding="3" Margin="5">Joystick 4</Label>
+            <Label Width="75" Height="25" Padding="3" Margin="5">Controller 4</Label>
             <Label x:Name="lblJoy4" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
-            <Button x:Name="btnJoy4" Content="Select" Height="25" Width="100" Margin="5"/>
+            <Button x:Name="btnJoy4" Content="Select" ToolTip="Browse to select Controller 4" Height="25" Width="100" Margin="5"/>
         </StackPanel>
         <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Label Width="70" Height="25" Padding="3" Margin="5">Joystick 5</Label>
+            <Label Width="75" Height="25" Padding="3" Margin="5">Controller 5</Label>
             <Label x:Name="lblJoy5" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
-            <Button x:Name="btnJoy5" Content="Select" Height="25" Width="100" Margin="5"/>
+            <Button x:Name="btnJoy5" Content="Select" ToolTip="Browse to select Controller 5" Height="25" Width="100" Margin="5"/>
         </StackPanel>
         <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Label Width="70" Height="25" Padding="3" Margin="5">Joystick 6</Label>
+            <Label Width="75" Height="25" Padding="3" Margin="5">Controller 6</Label>
             <Label x:Name="lblJoy6" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
-            <Button x:Name="btnJoy6" Content="Select" Height="25" Width="100" Margin="5"/>
+            <Button x:Name="btnJoy6" Content="Select" ToolTip="Browse to select Controller 6" Height="25" Width="100" Margin="5"/>
         </StackPanel>
         <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Label Width="70" Height="25" Padding="3" Margin="5">Joystick 7</Label>
+            <Label Width="75" Height="25" Padding="3" Margin="5">Controller 7</Label>
             <Label x:Name="lblJoy7" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
-            <Button x:Name="btnJoy7" Content="Select" Height="25" Width="100" Margin="5"/>
+            <Button x:Name="btnJoy7" Content="Select" ToolTip="Browse to select Controller 7" Height="25" Width="100" Margin="5"/>
         </StackPanel>
         <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Label Width="70" Height="25" Padding="3" Margin="5">Joystick 8</Label>
+            <Label Width="75" Height="25" Padding="3" Margin="5">Controller 8</Label>
             <Label x:Name="lblJoy8" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
-            <Button x:Name="btnJoy8" Content="Select" Height="25" Width="100" Margin="5"/>
+            <Button x:Name="btnJoy8" Content="Select" ToolTip="Browse to select Controller 8" Height="25" Width="100" Margin="5"/>
         </StackPanel>
         <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Label Width="70" Height="25" Padding="3" Margin="5">Joystick 9</Label>
+            <Label Width="75" Height="25" Padding="3" Margin="5">Controller 9</Label>
             <Label x:Name="lblJoy9" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
-            <Button x:Name="btnJoy9" Content="Select" Height="25" Width="100" Margin="5"/>
+            <Button x:Name="btnJoy9" Content="Select" ToolTip="Browse to select Controller 9" Height="25" Width="100" Margin="5"/>
         </StackPanel>
         <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Label Width="70" Height="25" Padding="3" Margin="5">Joystick 10</Label>
+            <Label Width="75" Height="25" Padding="3" Margin="5">Controller 10</Label>
             <Label x:Name="lblJoy10" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
-            <Button x:Name="btnJoy10" Content="Select" Height="25" Width="100" Margin="5"/>
+            <Button x:Name="btnJoy10" Content="Select" ToolTip="Browse to select Controller 10" Height="25" Width="100" Margin="5"/>
         </StackPanel>
 
         <StackPanel Margin="10" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Button x:Name="btnSaveGame" Content="Save Game Config" Height="25" Width="110" Margin="5"/>
-            <Button x:Name="btnCancelEdit" Content="Cancel Edit" Height="25" Width="110" Margin="5"/>
+            <Button x:Name="btnSaveGame" Content="Save Game Config" ToolTip="Save the config" Height="25" Width="110" Margin="5"/>
+            <Button x:Name="btnCancelEdit" Content="Cancel Edit" ToolTip="Discard changes" Height="25" Width="110" Margin="5"/>
         </StackPanel>
     </StackPanel>
     <StackPanel Margin="5" VerticalAlignment="Bottom" HorizontalAlignment="Left">
@@ -680,7 +738,7 @@ $xmlAbout = @"
 $xmlSplash = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Game Picker"
+        Title="Enable Game Controllers"
         Background="#66ffcc"
         Width="500"
         Height="200"
@@ -688,22 +746,22 @@ $xmlSplash = @"
         WindowStyle="None"
 >
 <StackPanel Margin="10" HorizontalAlignment="Center" VerticalAlignment="Center">
-    <Label FontSize="25" Content="Loading Game, Please Wait"></Label>
+    <Label FontSize="25" Content="Enabling Game Controllers, Please Wait"></Label>
 </StackPanel>
 </Window>
 "@
 $xmlSplashpnpDevice = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Game Picker"
+        Title="Find Controllers"
         Background="#66ffcc"
-        Width="500"
+        Width="600"
         Height="200"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
 >
 <StackPanel Margin="10" HorizontalAlignment="Center" VerticalAlignment="Center">
-    <Label FontSize="25" Content="Finding Available Joysticks, Please Wait"></Label>
+    <Label FontSize="25" Content="Finding Available Game Controllers, Please Wait"></Label>
 </StackPanel>
 </Window>
 "@
@@ -796,7 +854,7 @@ IF ($Settings.updatecheck) {
 }
 
 #Get the Joysticks now.
-$Joysticks = @(Get-Joysticks $xmlSplashpnpDevice)
+$Joysticks = @(Get-Joysticks -xml $xmlSplashpnpDevice -Settings $Settings)
 
 #Test if we have a Games.json file and create it if needed
 IF (Test-Path -Path $GamesJson){
@@ -823,6 +881,8 @@ $stackEdit.Visibility = "Collapsed"
 $stackCombo = $Window.FindName('stackCombo')
 $stackControls = $Window.FindName('stackControls')
 
+
+
 #Make a combobox and bind to our list of games
 $ComboGame = $Window.FindName('ComboGame')
 $ComboGame.ItemsSource = $Games
@@ -832,6 +892,8 @@ IF ($Games -contains $LastGame) {
 
 
 #Populate labels and text boxes with bindings
+
+#Make a File Menu Item for Update Check
 $chkVersion = $Window.FindName('chkVersion')
 $chkVersion.IsChecked = $Settings.updatecheck
 $chkVersion.Add_Checked({
@@ -850,6 +912,7 @@ $chkVersion.Add_UnChecked({
     }
     $Settings | ConvertTo-Json | Out-File -FilePath "$MyAppData\Settings.json"
 })
+
 $txtGameName = $Window.FindName('txtGameName')
 $txtGamePath = $Window.FindName('txtGamePath')
 $txtAppPath1 = $Window.FindName('txtAppPath1')
@@ -873,6 +936,17 @@ $btnAbout = $Window.FindName('btnAbout')
 $btnAbout.Add_Click({
     $About = Import-Xaml -xvar $xmlAbout
     $About.ShowDialog()
+})
+$btnClearBlacklist = $Window.FindName('btnClearBlacklist')
+$btnClearBlacklist.Add_Click({
+    IF ((Show-Message -Message "Are you sure you want to clear the blacklist and restart Hotas Launcher?" -Question) -eq 'yes') {
+        $Settings = Set-Blacklist -Settings $Settings
+        if ($myScript -like "*.ps1") {
+            $null = Test-Admin -MyScript "$Myscript" -restart
+        } Else {
+            $null = Test-Admin -Myscript "$Myscript" -restart -exe
+        }
+    }
 })
 $btnStart = $Window.FindName('btnStart')
 $btnStart.Add_Click({
@@ -938,7 +1012,7 @@ $btnStop.Add_Click({
 
 $btnAllOn = $Window.FindName('btnAllOn')
 $btnAllOn.Add_Click({
-    Switch-All -Joysticks $Joysticks -Options $Options -On
+    Switch-All -Joysticks $Joysticks -Options $Options -On -xml $xmlSplash
 })
 
 $btnAllOff = $Window.FindName('btnAllOff')
@@ -972,55 +1046,105 @@ $btnBrowseApp4.Add_Click({
     $txtAppPath4.Text = Get-FilePath
 })
 
-#Populate the Joysticks textboxes using a joystick picker
+#Populate the Joysticks textboxes using a Controller picker
 $btnJoy1 = $Window.FindName('btnJoy1')
 $btnJoy1.Add_Click({
-    $lblJoy1.Content = Get-Joystick -Joysticks $Joysticks
+    do {
+        $result = Get-Joystick -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData
+        IF ($result -ne $false) {$lblJoy1.Content = $result}
+    } while (
+        $result -eq $false
+    )
 })
 
 $btnJoy2 = $Window.FindName('btnJoy2')
 $btnJoy2.Add_Click({
-    $lblJoy2.Content = Get-Joystick -Joysticks $Joysticks
+    do {
+        $result = Get-Joystick -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData
+        IF ($result -ne $false) {$lblJoy2.Content = $result}
+    } while (
+        $result -eq $false
+    )
 })
 
 $btnJoy3 = $Window.FindName('btnJoy3')
 $btnJoy3.Add_Click({
-    $lblJoy3.Content = Get-Joystick -Joysticks $Joysticks
+    do {
+        $result = Get-Joystick -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData
+        IF ($result -ne $false) {$lblJoy3.Content = $result}
+    } while (
+        $result -eq $false
+    )
 })
 
 $btnJoy4 = $Window.FindName('btnJoy4')
 $btnJoy4.Add_Click({
-    $lblJoy4.Content = Get-Joystick -Joysticks $Joysticks
+    do {
+        $result = Get-Joystick -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData
+        IF ($result -ne $false) {$lblJoy4.Content = $result}
+    } while (
+        $result -eq $false
+    )
 })
 
 $btnJoy5 = $Window.FindName('btnJoy5')
 $btnJoy5.Add_Click({
-    $lblJoy5.Content = Get-Joystick -Joysticks $Joysticks
+    do {
+        $result = Get-Joystick -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData
+        IF ($result -ne $false) {$lblJoy5.Content = $result}
+    } while (
+        $result -eq $false
+    )
 })
 
 $btnJoy6 = $Window.FindName('btnJoy6')
 $btnJoy6.Add_Click({
-    $lblJoy6.Content = Get-Joystick -Joysticks $Joysticks
+    do {
+        $result = Get-Joystick -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData
+        IF ($result -ne $false) {$lblJoy6.Content = $result}
+    } while (
+        $result -eq $false
+    )
 })
 
 $btnJoy7 = $Window.FindName('btnJoy7')
 $btnJoy7.Add_Click({
-    $lblJoy7.Content = Get-Joystick -Joysticks $Joysticks
+    do {
+        $result = Get-Joystick -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData
+        IF ($result -ne $false) {$lblJoy7.Content = $result}
+    } while (
+        $result -eq $false
+    )
 })
 
 $btnJoy8 = $Window.FindName('btnJoy8')
 $btnJoy8.Add_Click({
-    $lblJoy8.Content = Get-Joystick -Joysticks $Joysticks
+    do {
+        $result = Get-Joystick -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData
+        IF ($result -ne $false) {$lblJoy8.Content = $result}
+    } while (
+        $result -eq $false
+    )
 })
 
 $btnJoy9 = $Window.FindName('btnJoy9')
 $btnJoy9.Add_Click({
-    $lblJoy9.Content = Get-Joystick -Joysticks $Joysticks
+    do {
+        $result = Get-Joystick -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData
+        IF ($result -ne $false) {$lblJoy9.Content = $result}
+    } while (
+        $result -eq $false
+    )
 })
 
 $btnJoy10 = $Window.FindName('btnJoy10')
 $btnJoy10.Add_Click({
-    $lblJoy10.Content = Get-Joystick -Joysticks $Joysticks
+    do {
+        $result = Get-Joystick -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData
+        IF ($result -ne $false) {$lblJoy10.Content = $result}
+    } while (
+        $result -eq $false
+    )
 })
 
 $btnSaveGame = $Window.FindName('btnSaveGame')
@@ -1104,6 +1228,12 @@ $btnNewGame.Add_Click({
     $lblJoy2.Content = $Options.$Game.Selections.Stick2
     $lblJoy3.Content = $Options.$Game.Selections.Stick3
     $lblJoy4.Content = $Options.$Game.Selections.Stick4
+    $lblJoy5.Content = $Options.$Game.Selections.Stick5
+    $lblJoy6.Content = $Options.$Game.Selections.Stick6
+    $lblJoy7.Content = $Options.$Game.Selections.Stick7
+    $lblJoy8.Content = $Options.$Game.Selections.Stick8
+    $lblJoy9.Content = $Options.$Game.Selections.Stick9
+    $lblJoy10.Content = $Options.$Game.Selections.Stick10
 })
 
 $btnEditGame = $Window.FindName('btnEditGame')
@@ -1126,6 +1256,12 @@ $btnEditGame.Add_Click({
     $lblJoy2.Content = $Options.$Game.Selections.Stick2
     $lblJoy3.Content = $Options.$Game.Selections.Stick3
     $lblJoy4.Content = $Options.$Game.Selections.Stick4
+    $lblJoy5.Content = $Options.$Game.Selections.Stick5
+    $lblJoy6.Content = $Options.$Game.Selections.Stick6
+    $lblJoy7.Content = $Options.$Game.Selections.Stick7
+    $lblJoy8.Content = $Options.$Game.Selections.Stick8
+    $lblJoy9.Content = $Options.$Game.Selections.Stick9
+    $lblJoy10.Content = $Options.$Game.Selections.Stick10
     
 })
 
@@ -1152,3 +1288,4 @@ $btnDelete.Add_Click({
 })
 #Show the window
 $Window.ShowDialog() | Out-Null
+Pause
