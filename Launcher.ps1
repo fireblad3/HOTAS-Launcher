@@ -577,6 +577,7 @@ $xmlMain = @"
         Title="Hotas Launcher"
         Background="#66ffcc"
         SizeToContent="WidthAndHeight"
+        ResizeMode="CanMinimize"
         MinHeight="300"
         MinWidth="300"
 >
@@ -588,127 +589,127 @@ $xmlMain = @"
                     <MenuItem Header="_New Config" x:Name="btnNewGame" />
                     <Separator />
                     <MenuItem Header="_Delete Config" x:Name="btnDelete" />
+                    <Separator />
                     <MenuItem Header="_Clear Blacklist" x:Name="btnClearBlacklist" />
                 </MenuItem>
                 <MenuItem Header="_Help">
                     <MenuItem Header="Check for Updates on Startup" x:Name="chkVersion" IsCheckable="True" />
+                    <Separator />
                     <MenuItem Header="_About" x:Name="btnAbout" />
                 </MenuItem>
             </Menu>
-            <StackPanel></StackPanel>
         </DockPanel>
-        <StackPanel x:Name="stackCombo" Background="#f0f0f5" Orientation="Vertical" HorizontalAlignment="Left" Margin='10'>
-            <StackPanel Margin="10" Orientation="Horizontal" HorizontalAlignment="Center">
-                <ComboBox x:Name="ComboGame" ToolTip="Select a Config" Margin="10" Height="25" Width="200" Padding="3"></ComboBox>
-            </StackPanel>
-            <StackPanel Margin="10" Orientation="Horizontal" HorizontalAlignment="Center">
+        <StackPanel x:Name="stackCombo" Background="#eae4ee" Orientation="Vertical" HorizontalAlignment="Center" Margin='10'>
+            <ComboBox x:Name="ComboGame" ToolTip="Select a Config" Margin="5" Height="25" Width="200" Padding="3"></ComboBox>
                 <Button Content="Start" x:Name="btnStart" ToolTip="Start Game and enable selected controllers" Height="30" Width="150" Margin="5"/>
                 <Button Content="Game Only" x:Name="btnStartGO" ToolTip="Launch the game without controllers" Height="30" Width="150" Margin="5"/>
                 <Button Content="Stop" x:Name="btnStop" ToolTip="Stop the game and disable controllers" Visibility='Collapsed' Height="30" Width="150" Margin="5"/>
-            </StackPanel>
-            <StackPanel x:Name="stackControls" Margin="10" Orientation="Vertical" HorizontalAlignment="Center">
-                <StackPanel Margin="10" Orientation="Horizontal" HorizontalAlignment="Center">
+                <StackPanel Background="#66ffcc" Margin="0">
+                <Label Padding="3"></Label>
                 </StackPanel>
-                <StackPanel Margin="10" Orientation="Horizontal" HorizontalAlignment="Center">
-                    <Button Content="All On" x:Name="btnAllOn" ToolTip="Turn on all controllers from all configurations" Height="25" Width="90" Margin="5"/>
-                    <Button Content="All Off" x:Name="btnAllOff" ToolTip="Turn off all controllers from all configurations" Height="25" Width="90" Margin="5"/>
-                </StackPanel>
+                <StackPanel x:Name="stackControls" Margin="0" Orientation="Vertical" HorizontalAlignment="Center">
+                <Button Content="All On" x:Name="btnAllOn" ToolTip="Turn on all controllers from all configurations" Height="25" Width="90" Margin="5"/>
+                <Button Content="All Off" x:Name="btnAllOff" ToolTip="Turn off all controllers from all configurations" Height="25" Width="90" Margin="5"/>
             </StackPanel>
         </StackPanel>
-        <StackPanel x:Name="stackEdit" Margin="10">
-            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
-                <Label FontSize="25" Width="150" Height="50" Padding="3" Margin="5">Game Name</Label>
+        <StackPanel Background="#eae4ee" x:Name="stackEdit" Margin="10">
+            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
+                <Label Width="70" Height="25" Padding="3" Margin="5">Name</Label>
                 <TextBox x:Name="txtGameName" Width = "300" Height="25" Padding="3" Margin="5"/>
             </StackPanel>
-            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
-                <Label FontSize="25" Width="150" Height="50" Padding="3" Margin="5">Game Paths</Label>
+            <StackPanel Background="#66ffcc">
+                <Label FontSize="25" Height="50" Padding="3" Margin="0">Paths</Label>
             </StackPanel>
-            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+            <StackPanel Margin="5 0 0 5" Orientation="Horizontal" HorizontalAlignment="Left">
                 <Label Width="70" Height="25" Padding="3" Margin="5">Game Path</Label>
                 <TextBox x:Name="txtGamePath" Width = "300" Height="25" Padding="3" Margin="5"/>
                 <Button x:Name="btnBrowseGame" Content="Browse" ToolTip="Select Game executable/launcher" Height="25" Width="100" Margin="5"/>
-                <Label Width="35" Height="25" Padding="3" Margin="5">Args</Label>
-                <TextBox x:Name="txtGameArgs" Width = "150" Height="25" Padding="3" Margin="5"/>
             </StackPanel>
-            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+            <StackPanel Margin="5 0 0 5" Orientation="Horizontal" HorizontalAlignment="Left">    
+                    <Label Width="70" Height="25" Padding="3" Margin="5">Switches</Label>
+                    <TextBox x:Name="txtGameArgs" Width = "150" Height="25" Padding="3" Margin="5"/>
+                </StackPanel>
+            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
                 <Label Width="70" Height="25" Padding="3" Margin="5">App1 Path</Label>
                 <TextBox x:Name="txtAppPath1" Width = "300" Height="25" Padding="3" Margin="5"/>
                 <Button x:Name="btnBrowseApp1" Content="Browse" ToolTip="Browse to select Optional support app 1" Height="25" Width="100" Margin="5"/>
             </StackPanel>
-            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
                 <Label Width="70" Height="25" Padding="3" Margin="5">App2 Path</Label>
                 <TextBox x:Name="txtAppPath2" Width = "300" Height="25" Padding="3" Margin="5"/>
                 <Button x:Name="btnBrowseApp2" Content="Browse" ToolTip="Browse to select Optional support app 2" Height="25" Width="100" Margin="5"/>
             </StackPanel>
-            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
                 <Label Width="70" Height="25" Padding="3" Margin="5">App3 Path</Label>
                 <TextBox x:Name="txtAppPath3" Width = "300" Height="25" Padding="3" Margin="5"/>
                 <Button x:Name="btnBrowseApp3" Content="Browse" ToolTip="Browse to select Optional support app 3" Height="25" Width="100" Margin="5"/>
             </StackPanel>
-            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
                 <Label Width="70" Height="25" Padding="3" Margin="5">App4 Path</Label>
                 <TextBox x:Name="txtAppPath4" Width = "300" Height="25" Padding="3" Margin="5"/>
                 <Button x:Name="btnBrowseApp4" Content="Browse" ToolTip="Browse to select Optional support app 4" Height="25" Width="100" Margin="5"/>
             </StackPanel>
-            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
-                <Label FontSize="25" Width="250" Height="50" Padding="3" Margin="5">Game Controllers</Label>
+            <StackPanel Background="#66ffcc">
+                <Label FontSize="25" Height="50" Padding="0" Margin="0">Controllers</Label>
             </StackPanel>
-            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
                 <Label Width="75" Height="25" Padding="3" Margin="5">Controller 1</Label>
-                <Label x:Name="lblJoy1" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
+                <Label x:Name="lblJoy1" Width="300" Height="25" Padding="3" Margin="5" Background="white" />
                 <Button x:Name="btnJoy1" Content="Select" ToolTip="Browse to select Controller 1" Height="25" Width="100" Margin="5"/>
             </StackPanel>
-            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
                 <Label Width="75" Height="25" Padding="3" Margin="5">Controller 2</Label>
-                <Label x:Name="lblJoy2" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
+                <Label x:Name="lblJoy2" Width="300" Height="25" Padding="3" Margin="5" Background="white"/>
                 <Button x:Name="btnJoy2" Content="Select" ToolTip="Browse to select Controller 2" Height="25" Width="100" Margin="5"/>
             </StackPanel>
-            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
                 <Label Width="75" Height="25" Padding="3" Margin="5">Controller 3</Label>
-                <Label x:Name="lblJoy3" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
+                <Label x:Name="lblJoy3" Width="300" Height="25" Padding="3" Margin="5" Background="white"/>
                 <Button x:Name="btnJoy3" Content="Select" ToolTip="Browse to select Controller 3" Height="25" Width="100" Margin="5"/>
             </StackPanel>
-            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
                 <Label Width="75" Height="25" Padding="3" Margin="5">Controller 4</Label>
-                <Label x:Name="lblJoy4" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
+                <Label x:Name="lblJoy4" Width="300" Height="25" Padding="3" Margin="5" Background="white"/>
                 <Button x:Name="btnJoy4" Content="Select" ToolTip="Browse to select Controller 4" Height="25" Width="100" Margin="5"/>
             </StackPanel>
-            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
                 <Label Width="75" Height="25" Padding="3" Margin="5">Controller 5</Label>
-                <Label x:Name="lblJoy5" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
+                <Label x:Name="lblJoy5" Width="300" Height="25" Padding="3" Margin="5" Background="white"/>
                 <Button x:Name="btnJoy5" Content="Select" ToolTip="Browse to select Controller 5" Height="25" Width="100" Margin="5"/>
             </StackPanel>
-            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
                 <Label Width="75" Height="25" Padding="3" Margin="5">Controller 6</Label>
-                <Label x:Name="lblJoy6" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
+                <Label x:Name="lblJoy6" Width="300" Height="25" Padding="3" Margin="5" Background="white"/>
                 <Button x:Name="btnJoy6" Content="Select" ToolTip="Browse to select Controller 6" Height="25" Width="100" Margin="5"/>
             </StackPanel>
-            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
                 <Label Width="75" Height="25" Padding="3" Margin="5">Controller 7</Label>
-                <Label x:Name="lblJoy7" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
+                <Label x:Name="lblJoy7" Width="300" Height="25" Padding="3" Margin="5" Background="white"/>
                 <Button x:Name="btnJoy7" Content="Select" ToolTip="Browse to select Controller 7" Height="25" Width="100" Margin="5"/>
             </StackPanel>
-            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
                 <Label Width="75" Height="25" Padding="3" Margin="5">Controller 8</Label>
-                <Label x:Name="lblJoy8" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
+                <Label x:Name="lblJoy8" Width="300" Height="25" Padding="3" Margin="5" Background="white"/>
                 <Button x:Name="btnJoy8" Content="Select" ToolTip="Browse to select Controller 8" Height="25" Width="100" Margin="5"/>
             </StackPanel>
-            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
                 <Label Width="75" Height="25" Padding="3" Margin="5">Controller 9</Label>
-                <Label x:Name="lblJoy9" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
+                <Label x:Name="lblJoy9" Width="300" Height="25" Padding="3" Margin="5" Background="white"/>
                 <Button x:Name="btnJoy9" Content="Select" ToolTip="Browse to select Controller 9" Height="25" Width="100" Margin="5"/>
             </StackPanel>
-            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
                 <Label Width="75" Height="25" Padding="3" Margin="5">Controller 10</Label>
-                <Label x:Name="lblJoy10" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
+                <Label x:Name="lblJoy10" Width="300" Height="25" Padding="3" Margin="5" Background="white"/>
                 <Button x:Name="btnJoy10" Content="Select" ToolTip="Browse to select Controller 10" Height="25" Width="100" Margin="5"/>
             </StackPanel>
-            <StackPanel Margin="10" Orientation="Horizontal" HorizontalAlignment="Center">
-                <Button x:Name="btnSaveGame" Content="Save Game Config" ToolTip="Save the config" Height="25" Width="110" Margin="5"/>
-                <Button x:Name="btnCancelEdit" Content="Cancel Edit" ToolTip="Discard changes" Height="25" Width="110" Margin="5"/>
+            <StackPanel Background="#66ffcc">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Button x:Name="btnSaveGame" Content="Save Game Config" ToolTip="Save the config" Height="25" Width="110" Margin="5"/>
+                    <Button x:Name="btnCancelEdit" Content="Cancel Edit" ToolTip="Discard changes" Height="25" Width="110" Margin="5"/>
+                </StackPanel>
             </StackPanel>
         </StackPanel>
-        <StackPanel Margin="5" VerticalAlignment="Bottom" HorizontalAlignment="Left">
+        <StackPanel Margin="0" VerticalAlignment="Bottom" HorizontalAlignment="Left">
             <Label Width="200" Height="25" Padding="3" Margin="5">Copyright, Daniel Bailey 2023</Label>
         </StackPanel>
     </StackPanel>
@@ -722,12 +723,12 @@ $xmlController = @"
         SizeToContent="WidthAndHeight"
         WindowStartupLocation="CenterScreen"
 >
-<StackPanel Margin="30" Background="#f0f0f5" Orientation="Horizontal">
-    <StackPanel Margin="5" Background="#f0f0f5" Orientation="Vertical">
+<StackPanel Margin="30" Background="#eae4ee" Orientation="Horizontal">
+    <StackPanel Margin="5" Background="#eae4ee" Orientation="Vertical">
         <Label FontSize="12" Width="125" Padding="3" Margin="5">Available Controllers</Label>
         <ListBox x:Name="lstController" SelectionMode="Extended" Margin="5"/>
     </StackPanel>
-    <StackPanel Margin="5" Background="#f0f0f5" Orientation="Vertical">
+    <StackPanel Margin="5" Background="#eae4ee" Orientation="Vertical">
         <Button Content="Add" x:Name="btnOk" IsDefault="True" ToolTip="Add controller to config" Height="30" Width="150" Margin="5"/>
         <Button Content="Cancel" x:Name="btnCancel" IsCancel="True" ToolTip="Cancel Operation" Height="30" Width="150" Margin="5"/>
         <Button Content="Add to Blacklist" x:Name="btnBlacklist" ToolTip="Add controller to Blacklist to prevent showing here" Height="30" Width="150" Margin="5"/>
@@ -744,7 +745,7 @@ $xmlAbout = @"
         MinHeight="200"
         MinWidth="200"
 >
-<StackPanel Margin="30" Background="#f0f0f5">
+<StackPanel Margin="30" Background="#eae4ee">
     <Label FontSize="14" FontWeight="Bold">Source</Label>
     <TextBlock  Margin="10" FontSize="12" TextWrapping="WrapWithOverflow" MaxWidth="600">
         Original source code can be found on github https://github.com/fireblad3/HOTAS-Launcher.
