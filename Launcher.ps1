@@ -60,12 +60,24 @@ v1.0.2.0 -  Implemented Tooltips
             Moved Settings, new game, Delete Game into file menu and renamed to config...
 v1.0.2.1 -  Fixed a couple minor bugs introduced in last patch that only showed up when running the compiled version.
 v1.0.2.2 -  Ditto
+v1.0.3.0 -  Rework of GUI including enabling multi select when adding controllers to the blacklist
+            Added Feature to prevent launching a game if a controller is not present
+            Fixed bug preventing reset blacklist from being displayed without restart of Hotas Launcher
+            General code tidy up
+            Hopefully fixed Jorgen's bug
 #>
 param(
 [switch]$Elevated
 )
 $version = "v1.0.3.0"
-$style = "Normal"
+$Testing = $false
+IF ($Testing) {
+    $style = "Normal"
+    $Pause = $true
+} Else {
+    $style = "Hidden"
+    $Pause = $false
+}
 
 function Import-Xaml {
     
@@ -200,6 +212,8 @@ Function Set-Blacklist{
             $Settings | Add-Member -NotePropertyName "blacklist" -NotePropertyValue @($blacklist)
             $Settings | ConvertTo-Json | Out-File -FilePath "$MyAppData\Settings.json"
             $Script:Settings = $Settings
+            
+            $Script:Joysticks = @(Get-Joysticks -xml $xmlSplashpnpDevice -Settings $Settings)
             $Settings
 }
 
@@ -421,33 +435,85 @@ Function Start-Game {
         # Turn it all On
         IF (!($NoApps)){
             ForEach ($Selection in $Selections) {
+                While ($Try -ne 'No'){
+                    $Stick = $Joysticks | Where-Object {$_.Name -eq $Selection}
+                    $SelectedStick = $Stick.ID
+                    $Try = 'No'
+                    IF ($SelectedStick.Length -lt 1) {
+                        $Try = Show-Message -Message "Unable to enable $Selection, Please plug-in or Turn on the Device: Try again?." -Question
+                        IF ($Try -eq 'Yes') {
+                            $Joysticks = @(Get-Joysticks -xml $xmlSplashpnpDevice -Settings $Settings)
+                            $Script:Joysticks = $Joysticks
+                        } Else {
+                            $btnStart.Visibility = 'Visible'
+                            $btnStop.Visibility = 'Collapsed'
+                            $ComboGame.Visibility = 'Visible'
+                            $StackControls.Visibility = 'Visible'
+                            $Splash.Close()
+                            Return
+                        }
+                    }
+                    $Connected = Get-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -eq $SelectedStick }
+                    IF ($null -eq $Connected) {
+                        $Try = Show-Message -Message "Dummy you turned off $Selection Turn it back on!,: Try again?." -Question
+                        IF ($Try -eq 'No') {
+                            $btnStart.Visibility = 'Visible'
+                            $btnStop.Visibility = 'Collapsed'
+                            $ComboGame.Visibility = 'Visible'
+                            $StackControls.Visibility = 'Visible'
+                            $Splash.Close()
+                            Return
+                        }
+                    }
+                }     
+            }
+            ForEach ($Selection in $Selections) {
                 $Stick = $Joysticks | Where-Object {$_.Name -eq $Selection}
                 $SelectedStick = $Stick.ID
-                Write-Host $Stick.ID
-                Start-Process -FilePath $Path -ArgumentList "/RunAsAdmin /enable $SelectedStick"
-                Timeout /T 5
+                Start-Process -FilePath $Path -ArgumentList "/RunAsAdmin /enable $SelectedStick" -Wait
+                Timeout /T 5 
             }
         }
-        
         # Start the Game
+        IF ($Testing) {
+            Write-Host "Skipping Game launch due to Testing"
+            $Splash.Close()
+            Return
+        }
         IF ($Game) {
             IF ($Game -ne 'DEMO') {
                 IF (!($NoApps)) {
                     IF ($Options.$Game.AppPath1){
-                    Write-Host "Starting Aux app 1"
-                        $Script:App1 = Start-Process -FilePath $Options.$Game.AppPath1 -PassThru
+                        Write-Host "Starting Aux app 1"
+                        Try {
+                            $Script:App1 = Start-Process -FilePath $Options.$Game.AppPath1 -Credential $Creds -PassThru
+                        } Catch{
+                            $Script:App1 = Start-Process -FilePath $Options.$Game.AppPath1 -PassThru
+                        }
                     }
                     IF ($Options.$Game.AppPath2){
-                    Write-Host "Starting Aux app 2"
-                        $Script:App2 = Start-Process -FilePath $Options.$Game.AppPath2 -Credential $Creds -PassThru
+                        Write-Host "Starting Aux app 2"
+                        Try {
+                            $Script:App2 = Start-Process -FilePath $Options.$Game.AppPath2 -Credential $Creds -PassThru
+                        } Catch{
+                            $Script:App2 = Start-Process -FilePath $Options.$Game.AppPath2 -PassThru
+                        }
                     }
                     IF ($Options.$Game.AppPath3){
-                    Write-Host "Starting Aux app 3"
-                        $Script:App3 = Start-Process -FilePath $Options.$Game.AppPath3 -Credential $Creds -PassThru
+                        Write-Host "Starting Aux app 3"
+                        Try {
+                            $Script:App3 = Start-Process -FilePath $Options.$Game.AppPath3 -Credential $Creds -PassThru
+                        } Catch{
+                            $Script:App3 = Start-Process -FilePath $Options.$Game.AppPath3 -PassThru
+                        }
                     }
                     IF ($Options.$Game.AppPath4){
-                    Write-Host "Starting Aux app 4"
-                        $Script:App4 = Start-Process -FilePath $Options.$Game.AppPath4 -Credential $Creds -PassThru
+                        Write-Host "Starting Aux app 4"
+                        Try {
+                            $Script:App4 = Start-Process -FilePath $Options.$Game.AppPath4 -Credential $Creds -PassThru
+                        } Catch {
+                            $Script:App4 = Start-Process -FilePath $Options.$Game.AppPath4 -Credential $Creds -PassThru
+                        }
                     }
                 }
                 Write-Host "Starting $Game"
@@ -992,19 +1058,13 @@ $btnAbout.Add_Click({
 })
 $btnClearBlacklist = $Window.FindName('btnClearBlacklist')
 $btnClearBlacklist.Add_Click({
-    IF ((Show-Message -Message "Are you sure you want to clear the blacklist and restart Hotas Launcher?" -Question) -eq 'yes') {
+    IF ((Show-Message -Message "Are you sure you want to clear the blacklist and re-detect controllers?" -Question) -eq 'yes') {
         $Settings = Set-Blacklist -Settings $Settings
-        if ($myScript -like "*.ps1") {
-            $null = Test-Admin -MyScript "$Myscript" -restart
-        } Else {
-            Show-Message -Message "Unable to re-launch Please Launch Hotas Launcher Manually"
-            #$null = Test-Admin -Myscript "$Myscript" -restart -exe
-        }
     }
 })
 $btnStart = $Window.FindName('btnStart')
 $btnStart.Add_Click({
-    Try {
+    #Try {
         IF ($ComboGame.SelectedItem -ne ' ') { #Only perform an action if a game is selected
             # Set visibility to hidden on some items to prevent user from crashing the app... and show the stop button
             $btnStart.Visibility = 'Collapsed'
@@ -1020,9 +1080,9 @@ $btnStart.Add_Click({
             $Settings.lastGame = $Game
             $Settings | ConvertTo-Json | Out-File -FilePath $SettingsPath
         }
-    } Catch {
-        Show-Message -Message "Game Settings invalid Please Fix your thing!"
-    }
+    #} Catch {
+     #   Show-Message -Message "Game Settings invalid Please Fix your thing!"
+    #}
 })
 $btnStartGO = $Window.FindName('btnStartGO')
 $btnStartGO.Add_Click({
@@ -1302,3 +1362,6 @@ $btnDelete.Add_Click({
 })
 #Show the window
 $Window.ShowDialog() | Out-Null
+IF ($Pause) {
+    Pause
+}
