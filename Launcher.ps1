@@ -869,31 +869,20 @@ IF (Test-Path -Path $GamesJson){
 $Script:Games = foreach($G in $Options.PsObject.Properties){
     $G.Name
 }
-
-
 #Create the main Window
-
 #$Window = Import-Xaml "Main.xaml"
 $Window = Import-Xaml -xvar $xmlMain
-
 #Bind some stack Panels so we can hide them as needed and Hide the edit panel
 $stackEdit = $Window.FindName('stackEdit')
 $stackEdit.Visibility = "Collapsed"
 $stackCombo = $Window.FindName('stackCombo')
 $stackControls = $Window.FindName('stackControls')
-
-
-
 #Make a combobox and bind to our list of games
 $ComboGame = $Window.FindName('ComboGame')
 $ComboGame.ItemsSource = $Games
 IF ($Games -contains $LastGame) {
     $ComboGame.SelectedItem = $LastGame
 }
-
-
-#Populate labels and text boxes with bindings
-
 #Make a File Menu Item for Update Check
 $chkVersion = $Window.FindName('chkVersion')
 $chkVersion.IsChecked = $Settings.updatecheck
@@ -913,7 +902,7 @@ $chkVersion.Add_UnChecked({
     }
     $Settings | ConvertTo-Json | Out-File -FilePath "$MyAppData\Settings.json"
 })
-
+#Populate labels and text boxes with bindings
 $txtGameName = $Window.FindName('txtGameName')
 $txtGamePath = $Window.FindName('txtGamePath')
 $txtAppPath1 = $Window.FindName('txtAppPath1')
