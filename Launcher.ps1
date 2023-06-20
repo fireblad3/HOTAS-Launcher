@@ -25,8 +25,9 @@ A - Significant (> 25%) changes or additions in functionality or interface.
 B - small changes or additions in functionality or interface.
 C - minor changes.
 D - fixes to a build that do not change the interface or add new features.
-
-Updates:
+#>
+#Updates:
+<#Alpha
 v1.0-alpha     -    Released 20/04/2023
 
 v1.0.0.1-alpha -    Updated Description
@@ -39,7 +40,8 @@ v1.0.0.2-alpha -    Fixed bug causing version to always be out of date.
 v1.0.0.3-alpha -    Removed wait from game launch so that the app window is not locked up while the game is running, it was no longer automating the closure of apps etc anyway.
                     Converted all xml to variables within the main script and modified Import-Xaml to accept a variable or a file using params to enable use of a file while testing or coding the xaml (for formatting help)
                     Add functioning all on and all off buttons to main form utilizing all unique sticks from the various game configs.
-
+#>
+<#
 v1.0.0.0 -  Added new button for launching the game only, this is handy when the game crashes or you run an update so you need to launch without the apps etc.
             Updated Test-Admin to work for .exe as well as the usual .ps1. This removes the need for manually choosing to run the application as administrator.
             Updated to using PS2EXE to compile my script as a .exe file. Added bonus of being able to put version and copyright info etc in the details of the .exe
@@ -62,7 +64,9 @@ v1.0.2.2 -  Ditto
 param(
 [switch]$Elevated
 )
-$version = "v1.0.2.2"
+$version = "v1.0.3.0"
+$style = "Normal"
+
 function Import-Xaml {
     
     Param(
@@ -88,7 +92,8 @@ function Test-Admin {
     [String]$elevated,
     [Switch]$test,
     [Switch]$exe,
-    [Switch]$restart
+    [Switch]$restart,
+    $style
     ) 
     $currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
     $Admin = $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
@@ -102,7 +107,7 @@ function Test-Admin {
                 IF ($exe.IsPresent) {
                     $Arguments =  '-elevated' ; Start-Process $myscript -Verb runAs -ArgumentList "$Arguments" ; exit
                 } Else {
-                    $Scriptpath =  "& '" + $myScript + "' -elevated" ; Start-Process powershell -Verb runAs -WindowStyle Hidden -ArgumentList "$Scriptpath" ; exit
+                    $Scriptpath =  "& '" + $myScript + "' -elevated" ; Start-Process powershell -Verb runAs -WindowStyle $style -ArgumentList "$Scriptpath" ; exit
                 }
             }
         }
@@ -248,7 +253,7 @@ Function Get-Joysticks {
     $Sticks
 }
 
-Function Get-Joystick {
+Function Get-Joystick-old {
     param(
         $Joysticks,
         $Settings,
@@ -334,6 +339,64 @@ Function Get-Joystick {
         #$false
     }
     
+}
+
+Function Get-Controller {
+    param(
+        $Joysticks,
+        $Settings,
+        $MyAppData,
+        $xml
+    )
+    #Create the Window
+    $WindowController = Import-Xaml -xvar $xml
+    #Place Buttons and connect to them on the form
+    $btnOk = $WindowController.FindName('btnOk')
+    $btnOk.Add_Click({
+        $WindowController.Tag = $lstController.SelectedItem
+        $WindowController.Close()
+    })
+    $btnCancel=$WindowController.FindName('btnCancel')
+    $btnCancel.Add_Click({
+        $WindowController.Tag = $null
+        $windowController.Close()
+    })
+    $btnBlacklist=$WindowController.FindName('btnBlacklist')
+    $btnBlacklist.Add_Click{
+        ForEach ($i in @($lstController.SelectedItems)) {
+            While ($lstControllerCollection -contains $i) {
+                $lstControllerCollection.Remove($i)
+            }
+            Try {
+                IF ($Settings.blacklist -notcontains $i) {
+                    $Settings.blacklist += $i 
+                }
+            } Catch {
+                $Settings | Add-Member -NotePropertyName "blacklist" -NotePropertyValue @($i)
+            }
+            $Script:Joysticks = $Joysticks | Where-Object { $_.Name -notMatch ($i) }
+        }
+        $Settings | ConvertTo-Json | Out-File -FilePath "$MyAppData\Settings.json"
+    }
+   
+    #connect to the listbox
+    $lstController = $WindowController.FindName('lstController')
+    #Create a list of controllers
+    $Controllers = foreach($item in $Joysticks){$Item.Name}
+    #Setup an Observable Collection and add the controllers to it
+    $lstControllerCollection = New-Object System.Collections.ObjectModel.ObservableCollection[string]
+    Foreach ($i in $Controllers) {
+        $lstControllerCollection.Add($i)
+    }
+    #Set the ItemSource to the Observable Collection
+    $lstController.ItemsSource = $lstControllerCollection
+    
+    # Make sure Window is on Top?
+    
+
+    # Show the Window and return the result
+    $null = $WindowController.ShowDialog()
+    $WindowController.Tag
 }
 
 Function Start-Game {
@@ -503,174 +566,173 @@ Function Switch-All {
 # Check that we are running as admin and restart if we aren't
 $myScript = $myinvocation.mycommand.definition
 if ($myScript -like "*.ps1") {
-    $null = Test-Admin -MyScript "$Myscript"
+    $null = Test-Admin -MyScript "$Myscript" -style $Style
 } Else {
-    $null = Test-Admin -Myscript "$Myscript" -exe
+    $null = Test-Admin -Myscript "$Myscript" -exe -style $Style
 }
 #Set up the xml variables
 $xmlMain = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Game Picker"
+        Title="Hotas Launcher"
         Background="#66ffcc"
         SizeToContent="WidthAndHeight"
         MinHeight="300"
-        MinWidth="300">
-
-<StackPanel>
-<DockPanel>
-    <Menu DockPanel.Dock="Top">
-        <MenuItem Header="_File">
-            <MenuItem Header="_Change Config" x:Name="btnEditGame" />
-            <MenuItem Header="_New Config" x:Name="btnNewGame" />
-            <Separator />
-            <MenuItem Header="_Delete Config" x:Name="btnDelete" />
-            <MenuItem Header="_Clear Blacklist" x:Name="btnClearBlacklist" />
-            
-        </MenuItem>
-        <MenuItem Header="_Help">
-            <MenuItem Header="Check for Updates on Startup" x:Name="chkVersion" IsCheckable="True" />
-            <MenuItem Header="_About" x:Name="btnAbout" />
-        </MenuItem>
-    </Menu>
-    <StackPanel></StackPanel>
-</DockPanel>
-    <StackPanel x:Name="stackCombo" Orientation="Vertical" HorizontalAlignment="Center">
-        <StackPanel Margin="10" Orientation="Horizontal" HorizontalAlignment="Center">
-            <ComboBox x:Name="ComboGame" ToolTip="Select a Config" Margin="10" Height="25" Width="200" Padding="3"></ComboBox>
-            
-        </StackPanel>
-        <StackPanel Margin="10" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Button Content="Start" x:Name="btnStart" ToolTip="Start Game and enable selected controllers" Height="30" Width="150" Margin="5"/>
-            <Button Content="Game Only" x:Name="btnStartGO" ToolTip="Launch the game without controllers" Height="30" Width="150" Margin="5"/>
-            <Button Content="Stop" x:Name="btnStop" ToolTip="Stop the game and disable controllers" Visibility='Collapsed' Height="30" Width="150" Margin="5"/>
-        </StackPanel>
-        <StackPanel x:Name="stackControls" Margin="10" Orientation="Vertical" HorizontalAlignment="Center">
+        MinWidth="300"
+>
+    <StackPanel>
+        <DockPanel>
+            <Menu DockPanel.Dock="Top">
+                <MenuItem Header="_File">
+                    <MenuItem Header="_Change Config" x:Name="btnEditGame" />
+                    <MenuItem Header="_New Config" x:Name="btnNewGame" />
+                    <Separator />
+                    <MenuItem Header="_Delete Config" x:Name="btnDelete" />
+                    <MenuItem Header="_Clear Blacklist" x:Name="btnClearBlacklist" />
+                </MenuItem>
+                <MenuItem Header="_Help">
+                    <MenuItem Header="Check for Updates on Startup" x:Name="chkVersion" IsCheckable="True" />
+                    <MenuItem Header="_About" x:Name="btnAbout" />
+                </MenuItem>
+            </Menu>
+            <StackPanel></StackPanel>
+        </DockPanel>
+        <StackPanel x:Name="stackCombo" Background="#f0f0f5" Orientation="Vertical" HorizontalAlignment="Left" Margin='10'>
             <StackPanel Margin="10" Orientation="Horizontal" HorizontalAlignment="Center">
-                
-                
-                
+                <ComboBox x:Name="ComboGame" ToolTip="Select a Config" Margin="10" Height="25" Width="200" Padding="3"></ComboBox>
             </StackPanel>
             <StackPanel Margin="10" Orientation="Horizontal" HorizontalAlignment="Center">
-                <Button Content="All On" x:Name="btnAllOn" ToolTip="Turn on all controllers from all configurations" Height="25" Width="90" Margin="5"/>
-                <Button Content="All Off" x:Name="btnAllOff" ToolTip="Turn off all controllers from all configurations" Height="25" Width="90" Margin="5"/>
+                <Button Content="Start" x:Name="btnStart" ToolTip="Start Game and enable selected controllers" Height="30" Width="150" Margin="5"/>
+                <Button Content="Game Only" x:Name="btnStartGO" ToolTip="Launch the game without controllers" Height="30" Width="150" Margin="5"/>
+                <Button Content="Stop" x:Name="btnStop" ToolTip="Stop the game and disable controllers" Visibility='Collapsed' Height="30" Width="150" Margin="5"/>
+            </StackPanel>
+            <StackPanel x:Name="stackControls" Margin="10" Orientation="Vertical" HorizontalAlignment="Center">
+                <StackPanel Margin="10" Orientation="Horizontal" HorizontalAlignment="Center">
+                </StackPanel>
+                <StackPanel Margin="10" Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Button Content="All On" x:Name="btnAllOn" ToolTip="Turn on all controllers from all configurations" Height="25" Width="90" Margin="5"/>
+                    <Button Content="All Off" x:Name="btnAllOff" ToolTip="Turn off all controllers from all configurations" Height="25" Width="90" Margin="5"/>
+                </StackPanel>
             </StackPanel>
         </StackPanel>
-        
-    </StackPanel>
-
-    <StackPanel x:Name="stackEdit" Margin="10">
-
-        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Label FontSize="25" Width="150" Height="50" Padding="3" Margin="5">Game Name</Label>
-            <TextBox x:Name="txtGameName" Width = "300" Height="25" Padding="3" Margin="5"/>
+        <StackPanel x:Name="stackEdit" Margin="10">
+            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+                <Label FontSize="25" Width="150" Height="50" Padding="3" Margin="5">Game Name</Label>
+                <TextBox x:Name="txtGameName" Width = "300" Height="25" Padding="3" Margin="5"/>
+            </StackPanel>
+            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+                <Label FontSize="25" Width="150" Height="50" Padding="3" Margin="5">Game Paths</Label>
+            </StackPanel>
+            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+                <Label Width="70" Height="25" Padding="3" Margin="5">Game Path</Label>
+                <TextBox x:Name="txtGamePath" Width = "300" Height="25" Padding="3" Margin="5"/>
+                <Button x:Name="btnBrowseGame" Content="Browse" ToolTip="Select Game executable/launcher" Height="25" Width="100" Margin="5"/>
+                <Label Width="35" Height="25" Padding="3" Margin="5">Args</Label>
+                <TextBox x:Name="txtGameArgs" Width = "150" Height="25" Padding="3" Margin="5"/>
+            </StackPanel>
+            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+                <Label Width="70" Height="25" Padding="3" Margin="5">App1 Path</Label>
+                <TextBox x:Name="txtAppPath1" Width = "300" Height="25" Padding="3" Margin="5"/>
+                <Button x:Name="btnBrowseApp1" Content="Browse" ToolTip="Browse to select Optional support app 1" Height="25" Width="100" Margin="5"/>
+            </StackPanel>
+            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+                <Label Width="70" Height="25" Padding="3" Margin="5">App2 Path</Label>
+                <TextBox x:Name="txtAppPath2" Width = "300" Height="25" Padding="3" Margin="5"/>
+                <Button x:Name="btnBrowseApp2" Content="Browse" ToolTip="Browse to select Optional support app 2" Height="25" Width="100" Margin="5"/>
+            </StackPanel>
+            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+                <Label Width="70" Height="25" Padding="3" Margin="5">App3 Path</Label>
+                <TextBox x:Name="txtAppPath3" Width = "300" Height="25" Padding="3" Margin="5"/>
+                <Button x:Name="btnBrowseApp3" Content="Browse" ToolTip="Browse to select Optional support app 3" Height="25" Width="100" Margin="5"/>
+            </StackPanel>
+            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+                <Label Width="70" Height="25" Padding="3" Margin="5">App4 Path</Label>
+                <TextBox x:Name="txtAppPath4" Width = "300" Height="25" Padding="3" Margin="5"/>
+                <Button x:Name="btnBrowseApp4" Content="Browse" ToolTip="Browse to select Optional support app 4" Height="25" Width="100" Margin="5"/>
+            </StackPanel>
+            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+                <Label FontSize="25" Width="250" Height="50" Padding="3" Margin="5">Game Controllers</Label>
+            </StackPanel>
+            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+                <Label Width="75" Height="25" Padding="3" Margin="5">Controller 1</Label>
+                <Label x:Name="lblJoy1" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
+                <Button x:Name="btnJoy1" Content="Select" ToolTip="Browse to select Controller 1" Height="25" Width="100" Margin="5"/>
+            </StackPanel>
+            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+                <Label Width="75" Height="25" Padding="3" Margin="5">Controller 2</Label>
+                <Label x:Name="lblJoy2" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
+                <Button x:Name="btnJoy2" Content="Select" ToolTip="Browse to select Controller 2" Height="25" Width="100" Margin="5"/>
+            </StackPanel>
+            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+                <Label Width="75" Height="25" Padding="3" Margin="5">Controller 3</Label>
+                <Label x:Name="lblJoy3" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
+                <Button x:Name="btnJoy3" Content="Select" ToolTip="Browse to select Controller 3" Height="25" Width="100" Margin="5"/>
+            </StackPanel>
+            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+                <Label Width="75" Height="25" Padding="3" Margin="5">Controller 4</Label>
+                <Label x:Name="lblJoy4" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
+                <Button x:Name="btnJoy4" Content="Select" ToolTip="Browse to select Controller 4" Height="25" Width="100" Margin="5"/>
+            </StackPanel>
+            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+                <Label Width="75" Height="25" Padding="3" Margin="5">Controller 5</Label>
+                <Label x:Name="lblJoy5" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
+                <Button x:Name="btnJoy5" Content="Select" ToolTip="Browse to select Controller 5" Height="25" Width="100" Margin="5"/>
+            </StackPanel>
+            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+                <Label Width="75" Height="25" Padding="3" Margin="5">Controller 6</Label>
+                <Label x:Name="lblJoy6" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
+                <Button x:Name="btnJoy6" Content="Select" ToolTip="Browse to select Controller 6" Height="25" Width="100" Margin="5"/>
+            </StackPanel>
+            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+                <Label Width="75" Height="25" Padding="3" Margin="5">Controller 7</Label>
+                <Label x:Name="lblJoy7" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
+                <Button x:Name="btnJoy7" Content="Select" ToolTip="Browse to select Controller 7" Height="25" Width="100" Margin="5"/>
+            </StackPanel>
+            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+                <Label Width="75" Height="25" Padding="3" Margin="5">Controller 8</Label>
+                <Label x:Name="lblJoy8" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
+                <Button x:Name="btnJoy8" Content="Select" ToolTip="Browse to select Controller 8" Height="25" Width="100" Margin="5"/>
+            </StackPanel>
+            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+                <Label Width="75" Height="25" Padding="3" Margin="5">Controller 9</Label>
+                <Label x:Name="lblJoy9" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
+                <Button x:Name="btnJoy9" Content="Select" ToolTip="Browse to select Controller 9" Height="25" Width="100" Margin="5"/>
+            </StackPanel>
+            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
+                <Label Width="75" Height="25" Padding="3" Margin="5">Controller 10</Label>
+                <Label x:Name="lblJoy10" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
+                <Button x:Name="btnJoy10" Content="Select" ToolTip="Browse to select Controller 10" Height="25" Width="100" Margin="5"/>
+            </StackPanel>
+            <StackPanel Margin="10" Orientation="Horizontal" HorizontalAlignment="Center">
+                <Button x:Name="btnSaveGame" Content="Save Game Config" ToolTip="Save the config" Height="25" Width="110" Margin="5"/>
+                <Button x:Name="btnCancelEdit" Content="Cancel Edit" ToolTip="Discard changes" Height="25" Width="110" Margin="5"/>
+            </StackPanel>
         </StackPanel>
-
-        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Label FontSize="25" Width="150" Height="50" Padding="3" Margin="5">Game Paths</Label>
-        </StackPanel>
-
-        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Label Width="70" Height="25" Padding="3" Margin="5">Game Path</Label>
-            <TextBox x:Name="txtGamePath" Width = "300" Height="25" Padding="3" Margin="5"/>
-            <Button x:Name="btnBrowseGame" Content="Browse" ToolTip="Select Game executable/launcher" Height="25" Width="100" Margin="5"/>
-            <Label Width="35" Height="25" Padding="3" Margin="5">Args</Label>
-            <TextBox x:Name="txtGameArgs" Width = "150" Height="25" Padding="3" Margin="5"/>
-        </StackPanel>
-        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Label Width="70" Height="25" Padding="3" Margin="5">App1 Path</Label>
-            <TextBox x:Name="txtAppPath1" Width = "300" Height="25" Padding="3" Margin="5"/>
-            <Button x:Name="btnBrowseApp1" Content="Browse" ToolTip="Browse to select Optional support app 1" Height="25" Width="100" Margin="5"/>
-            
-            
-        </StackPanel>
-        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Label Width="70" Height="25" Padding="3" Margin="5">App2 Path</Label>
-            <TextBox x:Name="txtAppPath2" Width = "300" Height="25" Padding="3" Margin="5"/>
-            <Button x:Name="btnBrowseApp2" Content="Browse" ToolTip="Browse to select Optional support app 2" Height="25" Width="100" Margin="5"/>
-            
-            
-        </StackPanel>
-        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Label Width="70" Height="25" Padding="3" Margin="5">App3 Path</Label>
-            <TextBox x:Name="txtAppPath3" Width = "300" Height="25" Padding="3" Margin="5"/>
-            <Button x:Name="btnBrowseApp3" Content="Browse" ToolTip="Browse to select Optional support app 3" Height="25" Width="100" Margin="5"/>
-            
-            
-        </StackPanel>
-        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Label Width="70" Height="25" Padding="3" Margin="5">App4 Path</Label>
-            <TextBox x:Name="txtAppPath4" Width = "300" Height="25" Padding="3" Margin="5"/>
-            <Button x:Name="btnBrowseApp4" Content="Browse" ToolTip="Browse to select Optional support app 4" Height="25" Width="100" Margin="5"/>
-            
-            
-        </StackPanel>
-
-        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Label FontSize="25" Width="250" Height="50" Padding="3" Margin="5">Game Controllers</Label>
-        </StackPanel>
-
-        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Label Width="75" Height="25" Padding="3" Margin="5">Controller 1</Label>
-            <Label x:Name="lblJoy1" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
-            <Button x:Name="btnJoy1" Content="Select" ToolTip="Browse to select Controller 1" Height="25" Width="100" Margin="5"/>
-        </StackPanel>
-        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Label Width="75" Height="25" Padding="3" Margin="5">Controller 2</Label>
-            <Label x:Name="lblJoy2" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
-            <Button x:Name="btnJoy2" Content="Select" ToolTip="Browse to select Controller 2" Height="25" Width="100" Margin="5"/>
-        </StackPanel>
-        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Label Width="75" Height="25" Padding="3" Margin="5">Controller 3</Label>
-            <Label x:Name="lblJoy3" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
-            <Button x:Name="btnJoy3" Content="Select" ToolTip="Browse to select Controller 3" Height="25" Width="100" Margin="5"/>
-        </StackPanel>
-        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Label Width="75" Height="25" Padding="3" Margin="5">Controller 4</Label>
-            <Label x:Name="lblJoy4" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
-            <Button x:Name="btnJoy4" Content="Select" ToolTip="Browse to select Controller 4" Height="25" Width="100" Margin="5"/>
-        </StackPanel>
-        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Label Width="75" Height="25" Padding="3" Margin="5">Controller 5</Label>
-            <Label x:Name="lblJoy5" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
-            <Button x:Name="btnJoy5" Content="Select" ToolTip="Browse to select Controller 5" Height="25" Width="100" Margin="5"/>
-        </StackPanel>
-        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Label Width="75" Height="25" Padding="3" Margin="5">Controller 6</Label>
-            <Label x:Name="lblJoy6" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
-            <Button x:Name="btnJoy6" Content="Select" ToolTip="Browse to select Controller 6" Height="25" Width="100" Margin="5"/>
-        </StackPanel>
-        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Label Width="75" Height="25" Padding="3" Margin="5">Controller 7</Label>
-            <Label x:Name="lblJoy7" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
-            <Button x:Name="btnJoy7" Content="Select" ToolTip="Browse to select Controller 7" Height="25" Width="100" Margin="5"/>
-        </StackPanel>
-        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Label Width="75" Height="25" Padding="3" Margin="5">Controller 8</Label>
-            <Label x:Name="lblJoy8" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
-            <Button x:Name="btnJoy8" Content="Select" ToolTip="Browse to select Controller 8" Height="25" Width="100" Margin="5"/>
-        </StackPanel>
-        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Label Width="75" Height="25" Padding="3" Margin="5">Controller 9</Label>
-            <Label x:Name="lblJoy9" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
-            <Button x:Name="btnJoy9" Content="Select" ToolTip="Browse to select Controller 9" Height="25" Width="100" Margin="5"/>
-        </StackPanel>
-        <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Label Width="75" Height="25" Padding="3" Margin="5">Controller 10</Label>
-            <Label x:Name="lblJoy10" Width="200" Height="25" Padding="3" Margin="5" Background="white"/>
-            <Button x:Name="btnJoy10" Content="Select" ToolTip="Browse to select Controller 10" Height="25" Width="100" Margin="5"/>
-        </StackPanel>
-
-        <StackPanel Margin="10" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Button x:Name="btnSaveGame" Content="Save Game Config" ToolTip="Save the config" Height="25" Width="110" Margin="5"/>
-            <Button x:Name="btnCancelEdit" Content="Cancel Edit" ToolTip="Discard changes" Height="25" Width="110" Margin="5"/>
+        <StackPanel Margin="5" VerticalAlignment="Bottom" HorizontalAlignment="Left">
+            <Label Width="200" Height="25" Padding="3" Margin="5">Copyright, Daniel Bailey 2023</Label>
         </StackPanel>
     </StackPanel>
-    <StackPanel Margin="5" VerticalAlignment="Bottom" HorizontalAlignment="Left">
-        <Label Width="200" Height="25" Padding="3" Margin="5">Copyright, Daniel Bailey 2023</Label>
+</Window>
+"@
+$xmlController = @"
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Select Controller"
+        Background="#66ffcc"
+        SizeToContent="WidthAndHeight"
+        WindowStartupLocation="CenterScreen"
+>
+<StackPanel Margin="30" Background="#f0f0f5" Orientation="Horizontal">
+    <StackPanel Margin="5" Background="#f0f0f5" Orientation="Vertical">
+        <Label FontSize="12" Width="125" Padding="3" Margin="5">Available Controllers</Label>
+        <ListBox x:Name="lstController" SelectionMode="Extended" Margin="5"/>
+    </StackPanel>
+    <StackPanel Margin="5" Background="#f0f0f5" Orientation="Vertical">
+        <Button Content="Add" x:Name="btnOk" IsDefault="True" ToolTip="Add controller to config" Height="30" Width="150" Margin="5"/>
+        <Button Content="Cancel" x:Name="btnCancel" IsCancel="True" ToolTip="Cancel Operation" Height="30" Width="150" Margin="5"/>
+        <Button Content="Add to Blacklist" x:Name="btnBlacklist" ToolTip="Add controller to Blacklist to prevent showing here" Height="30" Width="150" Margin="5"/>
     </StackPanel>
 </StackPanel>
-
 </Window>
 "@
 $xmlAbout = @"
@@ -849,7 +911,7 @@ IF ($Settings.updatecheck) {
             }
         }
     } Catch {
-        $Error
+        #$Error
         #Couldn't get version info so presuming no internet and no big deal so failing silently
     }
 }
@@ -1040,102 +1102,62 @@ $btnBrowseApp4.Add_Click({
 #Populate the Joysticks textboxes using a Controller picker
 $btnJoy1 = $Window.FindName('btnJoy1')
 $btnJoy1.Add_Click({
-    do {
-        $result = Get-Joystick -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData
-        IF ($result -ne $false) {$lblJoy1.Content = $result}
-    } while (
-        $result -eq $false
-    )
+        $result = Get-Controller -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData -xml $xmlController
+        $lblJoy1.Content = $result
 })
 
 $btnJoy2 = $Window.FindName('btnJoy2')
 $btnJoy2.Add_Click({
-    do {
-        $result = Get-Joystick -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData
-        IF ($result -ne $false) {$lblJoy2.Content = $result}
-    } while (
-        $result -eq $false
-    )
+        $result = Get-Controller -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData -xml $xmlController
+        $lblJoy2.Content = $result
 })
 
 $btnJoy3 = $Window.FindName('btnJoy3')
 $btnJoy3.Add_Click({
-    do {
-        $result = Get-Joystick -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData
-        IF ($result -ne $false) {$lblJoy3.Content = $result}
-    } while (
-        $result -eq $false
-    )
+        $result = Get-Controller -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData -xml $xmlController
+        $lblJoy3.Content = $result
 })
 
 $btnJoy4 = $Window.FindName('btnJoy4')
 $btnJoy4.Add_Click({
-    do {
-        $result = Get-Joystick -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData
-        IF ($result -ne $false) {$lblJoy4.Content = $result}
-    } while (
-        $result -eq $false
-    )
+        $result = Get-Controller -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData -xml $xmlController
+        $lblJoy4.Content = $result
 })
 
 $btnJoy5 = $Window.FindName('btnJoy5')
 $btnJoy5.Add_Click({
-    do {
-        $result = Get-Joystick -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData
-        IF ($result -ne $false) {$lblJoy5.Content = $result}
-    } while (
-        $result -eq $false
-    )
+        $result = Get-Controller -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData -xml $xmlController
+        $lblJoy5.Content = $result
 })
 
 $btnJoy6 = $Window.FindName('btnJoy6')
 $btnJoy6.Add_Click({
-    do {
-        $result = Get-Joystick -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData
-        IF ($result -ne $false) {$lblJoy6.Content = $result}
-    } while (
-        $result -eq $false
-    )
+        $result = Get-Controller -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData -xml $xmlController
+        $lblJoy6.Content = $result
 })
 
 $btnJoy7 = $Window.FindName('btnJoy7')
 $btnJoy7.Add_Click({
-    do {
-        $result = Get-Joystick -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData
-        IF ($result -ne $false) {$lblJoy7.Content = $result}
-    } while (
-        $result -eq $false
-    )
+        $result = Get-Controller -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData -xml $xmlController
+        $lblJoy7.Content = $result
 })
 
 $btnJoy8 = $Window.FindName('btnJoy8')
 $btnJoy8.Add_Click({
-    do {
-        $result = Get-Joystick -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData
-        IF ($result -ne $false) {$lblJoy8.Content = $result}
-    } while (
-        $result -eq $false
-    )
+        $result = Get-Controller -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData -xml $xmlController
+        $lblJoy8.Content = $result
 })
 
 $btnJoy9 = $Window.FindName('btnJoy9')
 $btnJoy9.Add_Click({
-    do {
-        $result = Get-Joystick -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData
-        IF ($result -ne $false) {$lblJoy9.Content = $result}
-    } while (
-        $result -eq $false
-    )
+        $result = Get-Controller -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData -xml $xmlController
+        $lblJoy9.Content = $result
 })
 
 $btnJoy10 = $Window.FindName('btnJoy10')
 $btnJoy10.Add_Click({
-    do {
-        $result = Get-Joystick -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData
-        IF ($result -ne $false) {$lblJoy10.Content = $result}
-    } while (
-        $result -eq $false
-    )
+        $result = Get-Controller -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData -xml $xmlController
+        $lblJoy10.Content = $result
 })
 
 $btnSaveGame = $Window.FindName('btnSaveGame')
