@@ -65,15 +65,22 @@ v1.0.3.0 -  Rework of GUI including enabling multi select when adding controller
             Fixed bug preventing reset blacklist from being displayed without restart of Hotas Launcher
             General code tidy up
             Hopefully fixed Jorgen's bug
+v1.0.4.0    Added feature to allow selecting an individual game or supporting app to run as administrator if required.
+            Added check to prevent user from using change config to create a new config which caused an error.
+            Fixed the logic with downloading or selecting the external app usbdeview which was causing an exception if all the ducks lined up... The application will not run if it can't find it.
+            Fixed Exception caused when saving your very first config.
+            Fixed Exception caused when deleting a config that doesn't exist
+            Fixed Added Checks and Balances on the Credentials supplied, if they don't pass you can't launch the app.
 #>
 param(
 [switch]$Elevated
 )
-$version = "v1.0.3.0"
+$version = "v1.0.4.0"
 $Testing = $false
 IF ($Testing) {
     $style = "Normal"
     $Pause = $true
+    $nogame = $false
 } Else {
     $style = "Hidden"
     $Pause = $false
@@ -165,26 +172,42 @@ Function Get-FilePath {
     $Path = $OpenFileDialog.filename
     $Path
 }
-
-Function Set-Settings {
-    
-    $Download = Show-Message -Message "Would you like to download usbdview automatically from https://www.nirsoft.net/utils/ ?" -Question
-    IF ($download -eq 'Yes') {
-        Try {
-            $url = "https://www.nirsoft.net/utils/usbdeview-x64.zip"
-            Invoke-WebRequest $url -OutFile $MyAppData\usbdeview-x64.zip
-            Expand-Archive -Path $MyAppData\usbdeview-x64.zip -DestinationPath $MyAppData\usbdeview-x64
-            Remove-Item -Path $MyAppData\usbdeview-x64.zip
-            $path = "$MyAppData\usbdeView-x64\usbdeview.exe"
-        } Catch {
-            Show-Message -Message "Download Failed, Please Download usbdview from https://www.nirsoft.net/utils/ and select USBDeview.exe in the next window"
-            $path = Get-FilePath
+Function Get-USBdview {
+    $path = "$MyAppData\usbdeView-x64\usbdeview.exe"
+    IF (!(Test-Path -Path $path)) {
+        $Download = Show-Message -Message "usbdview is required for Hotas-Launcher to run, Would you like to download usbdview automatically from https://www.nirsoft.net/utils/ ?" -Question
+        IF ($download -eq 'Yes') {
+            Try {
+                $url = "https://www.nirsoft.net/utils/usbdeview-x64.zip"
+                Invoke-WebRequest $url -OutFile $MyAppData\usbdeview-x64.zip
+                Expand-Archive -Path $MyAppData\usbdeview-x64.zip -DestinationPath $MyAppData\usbdeview-x64 -Force
+                Remove-Item -Path $MyAppData\usbdeview-x64.zip
+                
+            } Catch {
+                While (!(Test-Path -Path $path)){
+                    $test = Show-Message -Message "Download Failed, Please Download usbdview from https://www.nirsoft.net/utils/ and select USBDeview.exe in the next window" -Question
+                    IF ($test -eq 'Yes') {
+                        $path = Get-FilePath
+                    } Else {
+                        Break
+                    }
+                }
+            }
+        } Else {
+            While (!(Test-Path -Path $path)){
+                $test = Show-Message -Message "Download Failed, Please Download usbdview from https://www.nirsoft.net/utils/ and select USBDeview.exe in the next window" -Question
+                IF ($test -eq 'Yes') {
+                    $path = Get-FilePath
+                } Else {
+                    Break
+                }
+            }
         }
-    } Else {
-        Show-Message -Message "Please Download usbdview from https://www.nirsoft.net/utils/ and select USBDeview.exe in the next window"
-        $path = Get-FilePath
     }
-
+    $path
+}
+Function Set-Settings {
+    $path = Get-USBdview
     $Settings = [PSCustomObject]@{
         usbdview = $path
         lastGame = $false
@@ -413,6 +436,49 @@ Function Get-Controller {
     $WindowController.Tag
 }
 
+Function Test-MyCreds {
+    Param (
+        [System.Management.Automation.PSCredential]$Creds = [pscredential]::Empty
+    )
+    IF ($null -ne $Creds.UserName) {
+        Try {
+            $null = Start-Job {$PWD} -Credential $Creds | Receive-Job -AutoRemoveJob -Wait -ErrorAction Stop
+            $result = $true
+        } Catch {
+            $result = $false
+        }
+    } Else {
+        $result = $false
+    }
+   $result
+}
+
+Function Set-MyCreds {
+    $Creds = (Get-StoredCredential -Target "HOTAS Launcher")
+    While (!(Test-MyCreds -Creds $Creds) -and $again -ne 'No') {
+        Try {
+            Remove-StoredCredential -Target "HOTAS Launcher" -ErrorAction Ignore
+            $Credos = Get-Credential -UserName $Env:UserName -Message "Enter your local windows username and Password to run the game. Note, if your username has spaces in it you can use your Microsoft Account email and password if it is linked to your PC"
+            IF (Test-MyCreds -Creds $Credos) {
+                Write-Host "Before manager Set"
+                $null = $Credos | New-StoredCredential -Target "HOTAS Launcher" -Type Generic -Persist Enterprise 
+                Start-Sleep -Seconds 2
+                $Creds = (Get-StoredCredential -Target "HOTAS Launcher")
+            }
+            
+            IF (!(Test-MyCreds -Creds $Creds)){
+                $again = Show-Message -Message "Can't verify your credentials, Try entering them again?" -Question
+                IF ($again -eq 'No') {
+                    $Creds = [pscredential]::Empty
+                }
+            }
+        } Catch {
+            $again = Show-Message -Message "Can't verify your credentials, They can't be blank, Try entering them again"
+        }
+    }
+    $Creds
+}
+
 Function Start-Game {
     param(
         [String]$Game,
@@ -475,7 +541,7 @@ Function Start-Game {
             }
         }
         # Start the Game
-        IF ($Testing) {
+        IF ($nogame) {
             Write-Host "Skipping Game launch due to Testing"
             $Splash.Close()
             Return
@@ -486,41 +552,65 @@ Function Start-Game {
                     IF ($Options.$Game.AppPath1){
                         Write-Host "Starting Aux app 1"
                         Try {
-                            $Script:App1 = Start-Process -FilePath $Options.$Game.AppPath1 -Credential $Creds -PassThru
+                            IF ($Options.$Game.App1AsAdmin -eq $true) {
+                                $Script:App1 = Start-Process -FilePath $Options.$Game.AppPath1 -PassThru
+                            } Else {
+                                $Script:App1 = Start-Process -FilePath $Options.$Game.AppPath1 -Credential $Creds -PassThru
+                            }
                         } Catch{
-                            $Script:App1 = Start-Process -FilePath $Options.$Game.AppPath1 -PassThru
+                            Show-Message -Message "App1 failed to launch, maybe try setting it to run as admin in the config?"
                         }
                     }
                     IF ($Options.$Game.AppPath2){
                         Write-Host "Starting Aux app 2"
                         Try {
-                            $Script:App2 = Start-Process -FilePath $Options.$Game.AppPath2 -Credential $Creds -PassThru
+                            IF ($Options.$Game.App2AsAdmin -eq $true) {
+                                $Script:App2 = Start-Process -FilePath $Options.$Game.AppPath2 -PassThru
+                            } Else {
+                                $Script:App2 = Start-Process -FilePath $Options.$Game.AppPath2 -Credential $Creds -PassThru
+                            }
                         } Catch{
-                            $Script:App2 = Start-Process -FilePath $Options.$Game.AppPath2 -PassThru
+                            Show-Message -Message "App2 failed to launch, maybe try setting it to run as admin in the config?"
                         }
                     }
                     IF ($Options.$Game.AppPath3){
                         Write-Host "Starting Aux app 3"
                         Try {
-                            $Script:App3 = Start-Process -FilePath $Options.$Game.AppPath3 -Credential $Creds -PassThru
+                            IF ($Options.$Game.App3AsAdmin -eq $true) {
+                                $Script:App3 = Start-Process -FilePath $Options.$Game.AppPath3 -PassThru
+                            } Else {
+                                $Script:App3 = Start-Process -FilePath $Options.$Game.AppPath3 -Credential $Creds -PassThru
+                            }
                         } Catch{
-                            $Script:App3 = Start-Process -FilePath $Options.$Game.AppPath3 -PassThru
+                            Show-Message -Message "App3 failed to launch, maybe try setting it to run as admin in the config?"
                         }
                     }
                     IF ($Options.$Game.AppPath4){
                         Write-Host "Starting Aux app 4"
                         Try {
-                            $Script:App4 = Start-Process -FilePath $Options.$Game.AppPath4 -Credential $Creds -PassThru
+                            IF ($Options.$Game.App4AsAdmin -eq $true) {
+                                $Script:App4 = Start-Process -FilePath $Options.$Game.AppPath4 -Credential $Creds -PassThru
+                            } Else {
+                                $Script:App4 = Start-Process -FilePath $Options.$Game.AppPath4 -Credential $Creds -PassThru
+                            }
                         } Catch {
-                            $Script:App4 = Start-Process -FilePath $Options.$Game.AppPath4 -Credential $Creds -PassThru
+                            Show-Message -Message "App4 failed to launch, maybe try setting it to run as admin in the config?"
                         }
                     }
                 }
                 Write-Host "Starting $Game"
                 IF ($Options.$Game.arg1) {
-                    Start-Process -FilePath $Options.$Game.GamePath -ArgumentList $Options.$Game.Arg1 -Credential $Creds
+                    If ($Options.$Game.GameAsAdmin.IsChecked -eq $true){
+                        Start-Process -FilePath $Options.$Game.GamePath -ArgumentList $Options.$Game.Arg1
+                    } Else {
+                        Start-Process -FilePath $Options.$Game.GamePath -ArgumentList $Options.$Game.Arg1 -Credential $Creds
+                    }
                 } Else {
-                    Start-Process -FilePath $Options.$Game.GamePath -Credential $Creds
+                    If ($Options.$Game.GameAsAdmin.IsChecked -eq $true){
+                        Start-Process -FilePath $Options.$Game.GamePath
+                    } Else {
+                        Start-Process -FilePath $Options.$Game.GamePath -Credential $Creds
+                    }
                 }
                 $Splash.Close()
             }
@@ -690,6 +780,7 @@ $xmlMain = @"
                 <Label Width="70" Height="25" Padding="3" Margin="5">Game Path</Label>
                 <TextBox x:Name="txtGamePath" Width = "300" Height="25" Padding="3" Margin="5"/>
                 <Button x:Name="btnBrowseGame" Content="Browse" ToolTip="Select Game executable/launcher" Height="25" Width="100" Margin="5"/>
+                <CheckBox x:Name="chkGameAsAdmin" Content="Run as admin" ToolTip="Check to run the game as administrator" Margin="5"/>
             </StackPanel>
             <StackPanel Margin="5 0 0 5" Orientation="Horizontal" HorizontalAlignment="Left">    
                     <Label Width="70" Height="25" Padding="3" Margin="5">Switches</Label>
@@ -699,21 +790,25 @@ $xmlMain = @"
                 <Label Width="70" Height="25" Padding="3" Margin="5">App1 Path</Label>
                 <TextBox x:Name="txtAppPath1" Width = "300" Height="25" Padding="3" Margin="5"/>
                 <Button x:Name="btnBrowseApp1" Content="Browse" ToolTip="Browse to select Optional support app 1" Height="25" Width="100" Margin="5"/>
+                <CheckBox x:Name="chkApp1AsAdmin" Content="Run as admin" ToolTip="Check to run App 1 as administrator" Margin="5"/>
             </StackPanel>
             <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
                 <Label Width="70" Height="25" Padding="3" Margin="5">App2 Path</Label>
                 <TextBox x:Name="txtAppPath2" Width = "300" Height="25" Padding="3" Margin="5"/>
                 <Button x:Name="btnBrowseApp2" Content="Browse" ToolTip="Browse to select Optional support app 2" Height="25" Width="100" Margin="5"/>
+                <CheckBox x:Name="chkApp2AsAdmin" Content="Run as admin" ToolTip="Check to run App 2 as administrator" Margin="5"/>
             </StackPanel>
             <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
                 <Label Width="70" Height="25" Padding="3" Margin="5">App3 Path</Label>
                 <TextBox x:Name="txtAppPath3" Width = "300" Height="25" Padding="3" Margin="5"/>
                 <Button x:Name="btnBrowseApp3" Content="Browse" ToolTip="Browse to select Optional support app 3" Height="25" Width="100" Margin="5"/>
+                <CheckBox x:Name="chkApp3AsAdmin" Content="Run as admin" ToolTip="Check to run App 3 as administrator" Margin="5"/>
             </StackPanel>
             <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
                 <Label Width="70" Height="25" Padding="3" Margin="5">App4 Path</Label>
                 <TextBox x:Name="txtAppPath4" Width = "300" Height="25" Padding="3" Margin="5"/>
                 <Button x:Name="btnBrowseApp4" Content="Browse" ToolTip="Browse to select Optional support app 4" Height="25" Width="100" Margin="5"/>
+                <CheckBox x:Name="chkApp4AsAdmin" Content="Run as admin" ToolTip="Check to run App 4 as administrator" Margin="5"/>
             </StackPanel>
             <StackPanel Background="#66ffcc">
                 <Label FontSize="25" Height="50" Padding="0" Margin="0">Controllers</Label>
@@ -912,23 +1007,22 @@ if (Get-Module -ListAvailable -Name CredentialManager) {
     }
 }
 
-#Initial Setup
-
 #Get Credentials or set them if needed
 IF ($CredentialsManaged) {
-    try {
-        $Creds = (Get-StoredCredential -Target "HOTAS Launcher")
-        If (!(Get-StoredCredential -Target "HOTAS Launcher")){
-            Write-Warning -Message "Credentials don't exist, prompting user"
-            $Creds = Get-Credential -Message "Enter your windows username and Password to run the game" | New-StoredCredential -Target "HOTAS Launcher" -Type Generic -Persist Enterprise
-            $Creds = (Get-StoredCredential -Target "HOTAS Launcher")
-        }
-    } catch {
-        Show-Message -Message $Error
-    }
+    $Creds = Set-MyCreds
+    IF (!(Test-MyCreds -Creds $Creds)) {Exit} 
 } Else {
-    $Creds = (Get-Credential -Message "Please enter your windows username and password for launching the game as your standard user")
+    While (!(Test-MyCreds -Creds $Creds)){
+        Try {
+            $Creds = (Get-Credential -Message "Please enter your local windows username and password for launching the game as your standard user. If there are spaces in your username you can use your Microsoft account email and password.")
+        } Catch{
+            $Creds = [pscredential]::Empty
+            $again = Show-Message -Message "Cannot validate credentials, try again?" -Question
+            IF ($again -eq 'no') {Exit}
+        }
+    } 
 }
+
 
 #Set up Paths for config files
 $MyAppData = "$env:APPDATA\HOTAS Launcher"
@@ -949,7 +1043,16 @@ IF (Test-Path -Path "$SettingsPath") {
     $Settings = Set-Settings
     $path = $Settings.usbdview
 }
-
+# Now to prevent any shinanegans we check if usbdview is found and if not we kill the app.
+IF (!(Test-Path -Path $path)){
+    $path = Get-USBdview
+    IF (!(Test-Path -Path $path)){
+        Show-Message -Message "Unable to find usbdview.exe Hotas Launcher quitting."
+        Exit
+    }
+    $Settings.usbdview = $path
+    $Settings | ConvertTo-Json | Out-File -FilePath "$MyAppData\Settings.json"
+}
 #Check if we have the latest version of HOTAS Launcher
 IF ($Settings.updatecheck) {
     Try {
@@ -1031,6 +1134,13 @@ $chkVersion.Add_UnChecked({
     }
     $Settings | ConvertTo-Json | Out-File -FilePath "$MyAppData\Settings.json"
 })
+# Assign Checkboxes for Run as Admin
+$chkGameAsAdmin = $Window.FindName('chkGameAsAdmin')
+$chkApp1AsAdmin = $Window.FindName('chkApp1AsAdmin')
+$chkApp2AsAdmin = $Window.FindName('chkApp2AsAdmin')
+$chkApp3AsAdmin = $Window.FindName('chkApp3AsAdmin')
+$chkApp4AsAdmin = $Window.FindName('chkApp4AsAdmin')
+
 #Populate labels and text boxes with bindings
 $txtGameName = $Window.FindName('txtGameName')
 $txtGamePath = $Window.FindName('txtGamePath')
@@ -1226,7 +1336,7 @@ $btnSaveGame.Add_Click({
     
     #use the game
     $SelectedGame = ($Window.FindName('ComboGame')).SelectedItem
-    IF ($SelectedGame -ne " "){ #If we have selected a game and changed the name remove the old one
+    IF ($SelectedGame -ne " " -and $null -ne $SelectedGame){ #If we have selected a game and changed the name remove the old one
         if ($SelectedGame -ne $txtGameName.Text) {
             $Options.psobject.properties.remove($SelectedGame)
         }
@@ -1237,10 +1347,15 @@ $btnSaveGame.Add_Click({
         $GameObject = [PSCustomObject]@{
             Name = $txtGameName.Text
             GamePath = $txtGamePath.Text
+            GameAsAdmin = $chkGameAsAdmin.IsChecked
             AppPath1 = $txtAppPath1.Text
+            App1AsAdmin = $chkApp1AsAdmin.IsChecked
             AppPath2 = $txtAppPath2.Text
+            App2AsAdmin = $chkApp2AsAdmin.IsChecked
             AppPath3 = $txtAppPath3.Text
+            App3AsAdmin = $chkApp3AsAdmin.IsChecked
             AppPath4 = $txtAppPath4.Text
+            App4AsAdmin = $chkApp4AsAdmin.IsChecked
             Arg1 = $txtGameArgs.Text
             Selections = [PSCustomObject]@{
                 Stick1=$lblJoy1.Content
@@ -1293,10 +1408,15 @@ $btnNewGame.Add_Click({
     #blank all the fields
     $txtGameName.Text = $Options.$Game.Name
     $txtGamePath.Text = $Options.$Game.GamePath
+    IF ($null -ne $Options.$Game.GameAsAdmin) {$chkGameAsAdmin.IsChecked = $Options.$Game.GameAsAdmin} Else {$chkGameAsAdmin.IsChecked = $false}
     $txtAppPath1.Text = $Options.$Game.AppPath1
+    IF ($null -ne $Options.$Game.App1AsAdmin) {$chkApp1AsAdmin.IsChecked = $Options.$Game.App1AsAdmin} Else {$chkApp1AsAdmin.IsChecked = $false}
     $txtAppPath2.Text = $Options.$Game.AppPath2
+    IF ($null -ne $Options.$Game.App2AsAdmin) {$chkApp2AsAdmin.IsChecked = $Options.$Game.App2AsAdmin} Else {$chkApp2AsAdmin.IsChecked = $false}
     $txtAppPath3.Text = $Options.$Game.AppPath3
+    IF ($null -ne $Options.$Game.App3AsAdmin) {$chkApp3AsAdmin.IsChecked = $Options.$Game.App3AsAdmin} Else {$chkApp3AsAdmin.IsChecked = $false}
     $txtAppPath4.Text = $Options.$Game.AppPath4
+    IF ($null -ne $Options.$Game.App4AsAdmin) {$chkApp4AsAdmin.IsChecked = $Options.$Game.App4AsAdmin} Else {$chkApp4AsAdmin.IsChecked = $false}
     $txtGameArgs.Text = $Options.$Game.Arg1
     $lblJoy1.Content = $Options.$Game.Selections.Stick1
     $lblJoy2.Content = $Options.$Game.Selections.Stick2
@@ -1312,31 +1432,39 @@ $btnNewGame.Add_Click({
 
 $btnEditGame = $Window.FindName('btnEditGame')
 $btnEditGame.Add_Click({
-    #hide the combo box to prevent user from causing problems and show the edit fields
-    $stackEdit.Visibility = "Visible"
-    $stackCombo.Visibility = "Collapsed"
-    #Select the game to the selected item from the combobox
-    $Game = ($Window.FindName('ComboGame')).SelectedItem
-    
-    #set all the fields to their current settings
-    $txtGameName.Text = $Options.$Game.Name
-    $txtGamePath.Text = $Options.$Game.GamePath
-    $txtAppPath1.Text = $Options.$Game.AppPath1
-    $txtAppPath2.Text = $Options.$Game.AppPath2
-    $txtAppPath3.Text = $Options.$Game.AppPath3
-    $txtAppPath4.Text = $Options.$Game.AppPath4
-    $txtGameArgs.Text = $Options.$Game.Arg1
-    $lblJoy1.Content = $Options.$Game.Selections.Stick1
-    $lblJoy2.Content = $Options.$Game.Selections.Stick2
-    $lblJoy3.Content = $Options.$Game.Selections.Stick3
-    $lblJoy4.Content = $Options.$Game.Selections.Stick4
-    $lblJoy5.Content = $Options.$Game.Selections.Stick5
-    $lblJoy6.Content = $Options.$Game.Selections.Stick6
-    $lblJoy7.Content = $Options.$Game.Selections.Stick7
-    $lblJoy8.Content = $Options.$Game.Selections.Stick8
-    $lblJoy9.Content = $Options.$Game.Selections.Stick9
-    $lblJoy10.Content = $Options.$Game.Selections.Stick10
-    
+    IF ($ComboGame.text -ne " " -and $false -ne $ComboGame.text){
+        #hide the combo box to prevent user from causing problems and show the edit fields
+        $stackEdit.Visibility = "Visible"
+        $stackCombo.Visibility = "Collapsed"
+        #Select the game to the selected item from the combobox
+        $Game = ($Window.FindName('ComboGame')).SelectedItem
+        
+        #set all the fields to their current settings
+        $txtGameName.Text = $Options.$Game.Name
+        $txtGamePath.Text = $Options.$Game.GamePath
+        IF ($null -ne $Options.$Game.GameAsAdmin) {$chkGameAsAdmin.IsChecked = $Options.$Game.GameAsAdmin} Else {$chkGameAsAdmin.IsChecked = $false}
+        $txtAppPath1.Text = $Options.$Game.AppPath1
+        IF ($null -ne $Options.$Game.App1AsAdmin) {$chkApp1AsAdmin.IsChecked = $Options.$Game.App1AsAdmin} Else {$chkApp1AsAdmin.IsChecked = $false}
+        $txtAppPath2.Text = $Options.$Game.AppPath2
+        IF ($null -ne $Options.$Game.App2AsAdmin) {$chkApp2AsAdmin.IsChecked = $Options.$Game.App2AsAdmin} Else {$chkApp2AsAdmin.IsChecked = $false}
+        $txtAppPath3.Text = $Options.$Game.AppPath3
+        IF ($null -ne $Options.$Game.App3AsAdmin) {$chkApp3AsAdmin.IsChecked = $Options.$Game.App3AsAdmin} Else {$chkApp3AsAdmin.IsChecked = $false}
+        $txtAppPath4.Text = $Options.$Game.AppPath4
+        IF ($null -ne $Options.$Game.App4AsAdmin) {$chkApp4AsAdmin.IsChecked = $Options.$Game.App4AsAdmin} Else {$chkApp4AsAdmin.IsChecked = $false}
+        $txtGameArgs.Text = $Options.$Game.Arg1
+        $lblJoy1.Content = $Options.$Game.Selections.Stick1
+        $lblJoy2.Content = $Options.$Game.Selections.Stick2
+        $lblJoy3.Content = $Options.$Game.Selections.Stick3
+        $lblJoy4.Content = $Options.$Game.Selections.Stick4
+        $lblJoy5.Content = $Options.$Game.Selections.Stick5
+        $lblJoy6.Content = $Options.$Game.Selections.Stick6
+        $lblJoy7.Content = $Options.$Game.Selections.Stick7
+        $lblJoy8.Content = $Options.$Game.Selections.Stick8
+        $lblJoy9.Content = $Options.$Game.Selections.Stick9
+        $lblJoy10.Content = $Options.$Game.Selections.Stick10
+    } Else {
+        Show-Message -Message "It appears you have not selected a Config, if you wish to create a new game, please click `"New Config`"."
+    }
 })
 
 $btnDelete = $Window.FindName('btnDelete')
@@ -1344,19 +1472,19 @@ $btnDelete.Add_Click({
     #lets use the game that is selected for this...
     $SelectedGame = ($Window.FindName('ComboGame')).SelectedItem
     #Double check the user did not get click happy
-    $Answer = Show-Message -Message "Are you sure you wish to Delete $SelectedGame ?" -Question
-    IF ($Answer -eq 'Yes') {# Well we warned him, lets go...
-        IF ($SelectedGame -ne " "){ #nah you're not allowed to delete the blank game ;)
-            #Remove the object for that game
-            $Options.psobject.properties.remove($SelectedGame)
-            #Write the changes to file
-            $Options | ConvertTo-Json | Out-File -FilePath "$GamesJson"
-            # Reset the source for the combobox to refresh it
-            $Games = foreach($G in $Options.PsObject.Properties){
-                $G.Name
-            }
-            $ComboGame.ItemsSource = $Games
-            $ComboGame.SelectedItem = $txtGameName.Text
+    IF ($SelectedGame -ne " " -and $null -ne $SelectedGame){
+        $Answer = Show-Message -Message "Are you sure you wish to Delete $SelectedGame ?" -Question
+        IF ($Answer -eq 'Yes') {# Well we warned him, lets go...
+                #Remove the object for that game
+                $Options.psobject.properties.remove($SelectedGame)
+                #Write the changes to file
+                $Options | ConvertTo-Json | Out-File -FilePath "$GamesJson"
+                # Reset the source for the combobox to refresh it
+                $Games = foreach($G in $Options.PsObject.Properties){
+                    $G.Name
+                }
+                $ComboGame.ItemsSource = $Games
+                $ComboGame.SelectedItem = $txtGameName.Text
         }
     }
 })
