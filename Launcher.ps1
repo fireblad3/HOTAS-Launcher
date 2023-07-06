@@ -71,11 +71,16 @@ v1.0.4.0    Added feature to allow selecting an individual game or supporting ap
             Fixed Exception caused when saving your very first config.
             Fixed Exception caused when deleting a config that doesn't exist
             Fixed Added Checks and Balances on the Credentials supplied, if they don't pass you can't launch the app.
+v1.0.5.0    Fixed some apps not loading by Adding -WorkingDirectory to all start-process commands, this allows apps with relative paths launch correctly.
+            Added additional 6 app paths for those with many supporting apps...
+            Made some gui changes to accomodate the extra paths on a smaller screen
+            Added a Configurations menu and moved all configuration stuff in there
+            Added an Exit button to the file menu.
 #>
 param(
 [switch]$Elevated
 )
-$version = "v1.0.4.0"
+$version = "v1.0.5.0"
 $Testing = $false
 IF ($Testing) {
     $style = "Normal"
@@ -521,7 +526,7 @@ Function Start-Game {
                     }
                     $Connected = Get-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -eq $SelectedStick }
                     IF ($null -eq $Connected) {
-                        $Try = Show-Message -Message "Dummy you turned off $Selection Turn it back on!,: Try again?." -Question
+                        $Try = Show-Message -Message "Hey dummy you turned off $Selection Turn it back on!,: Try again?." -Question
                         IF ($Try -eq 'No') {
                             $btnStart.Visibility = 'Visible'
                             $btnStop.Visibility = 'Collapsed'
@@ -552,10 +557,13 @@ Function Start-Game {
                     IF ($Options.$Game.AppPath1){
                         Write-Host "Starting Aux app 1"
                         Try {
+                            $App1Path = $Options.$Game.AppPath1
+                            $App1Parent = Split-Path "$App1Path" -Parent
                             IF ($Options.$Game.App1AsAdmin -eq $true) {
-                                $Script:App1 = Start-Process -FilePath $Options.$Game.AppPath1 -PassThru
+                                $Script:App1 = Start-Process -WorkingDirectory $App1Parent -FilePath $App1Path -PassThru
+                                
                             } Else {
-                                $Script:App1 = Start-Process -FilePath $Options.$Game.AppPath1 -Credential $Creds -PassThru
+                                $Script:App1 = Start-Process -WorkingDirectory $App1Parent -FilePath $App1Path -Credential $Creds -PassThru
                             }
                         } Catch{
                             Show-Message -Message "App1 failed to launch, maybe try setting it to run as admin in the config?"
@@ -564,10 +572,12 @@ Function Start-Game {
                     IF ($Options.$Game.AppPath2){
                         Write-Host "Starting Aux app 2"
                         Try {
+                            $App2Path = $Options.$Game.AppPath2
+                            $App2Parent = Split-Path $App2Path -Parent
                             IF ($Options.$Game.App2AsAdmin -eq $true) {
-                                $Script:App2 = Start-Process -FilePath $Options.$Game.AppPath2 -PassThru
+                                $Script:App2 = Start-Process -WorkingDirectory $App2Parent -FilePath $App2Path -PassThru
                             } Else {
-                                $Script:App2 = Start-Process -FilePath $Options.$Game.AppPath2 -Credential $Creds -PassThru
+                                $Script:App2 = Start-Process -WorkingDirectory $App2Parent -FilePath $App2Path -Credential $Creds -PassThru
                             }
                         } Catch{
                             Show-Message -Message "App2 failed to launch, maybe try setting it to run as admin in the config?"
@@ -576,10 +586,12 @@ Function Start-Game {
                     IF ($Options.$Game.AppPath3){
                         Write-Host "Starting Aux app 3"
                         Try {
+                            $App3Path = $Options.$Game.AppPath3
+                            $App3Parent = Split-Path $Options.$Game.AppPath3 -Parent
                             IF ($Options.$Game.App3AsAdmin -eq $true) {
-                                $Script:App3 = Start-Process -FilePath $Options.$Game.AppPath3 -PassThru
+                                $Script:App3 = Start-Process -WorkingDirectory $App3Parent -FilePath $App3Path -PassThru
                             } Else {
-                                $Script:App3 = Start-Process -FilePath $Options.$Game.AppPath3 -Credential $Creds -PassThru
+                                $Script:App3 = Start-Process -WorkingDirectory $App3Parent -FilePath $App3Path -Credential $Creds -PassThru
                             }
                         } Catch{
                             Show-Message -Message "App3 failed to launch, maybe try setting it to run as admin in the config?"
@@ -588,28 +600,122 @@ Function Start-Game {
                     IF ($Options.$Game.AppPath4){
                         Write-Host "Starting Aux app 4"
                         Try {
+                            $App4Path = $Options.$Game.AppPath4
+                            $App4Parent = Split-Path $App4Path -Parent
                             IF ($Options.$Game.App4AsAdmin -eq $true) {
-                                $Script:App4 = Start-Process -FilePath $Options.$Game.AppPath4 -Credential $Creds -PassThru
+                                $Script:App4 = Start-Process -WorkingDirectory $App4Parent -FilePath $App4Path  -PassThru
                             } Else {
-                                $Script:App4 = Start-Process -FilePath $Options.$Game.AppPath4 -Credential $Creds -PassThru
+                                $Script:App4 = Start-Process -WorkingDirectory $App4Parent -FilePath $App4Path -Credential $Creds -PassThru
                             }
                         } Catch {
                             Show-Message -Message "App4 failed to launch, maybe try setting it to run as admin in the config?"
                         }
                     }
                 }
+                IF ($Options.$Game.AppPath5){
+                    Write-Host "Starting Aux app 5"
+                    Try {
+                        $App5Path = $Options.$Game.AppPath5
+                        $App5Parent = Split-Path "$App5Path" -Parent
+                        IF ($Options.$Game.App5AsAdmin -eq $true) {
+                            $Script:App5 = Start-Process -WorkingDirectory $App5Parent -FilePath $App5Path -PassThru
+                            
+                        } Else {
+                            $Script:App5 = Start-Process -WorkingDirectory $App5Parent -FilePath $App5Path -Credential $Creds -PassThru
+                        }
+                    } Catch{
+                        Show-Message -Message "App5 failed to launch, maybe try setting it to run as admin in the config?"
+                    }
+                }
+                IF ($Options.$Game.AppPath6){
+                    Write-Host "Starting Aux app 6"
+                    Try {
+                        $App6Path = $Options.$Game.AppPath6
+                        $App6Parent = Split-Path "$App6Path" -Parent
+                        IF ($Options.$Game.App6AsAdmin -eq $true) {
+                            $Script:App6 = Start-Process -WorkingDirectory $App6Parent -FilePath $App6Path -PassThru
+                            
+                        } Else {
+                            $Script:App6 = Start-Process -WorkingDirectory $App6Parent -FilePath $App6Path -Credential $Creds -PassThru
+                        }
+                    } Catch{
+                        Show-Message -Message "App6 failed to launch, maybe try setting it to run as admin in the config?"
+                    }
+                }
+                IF ($Options.$Game.AppPath7){
+                    Write-Host "Starting Aux app 7"
+                    Try {
+                        $App7Path = $Options.$Game.AppPath7
+                        $App7Parent = Split-Path "$App7Path" -Parent
+                        IF ($Options.$Game.App7AsAdmin -eq $true) {
+                            $Script:App7 = Start-Process -WorkingDirectory $App7Parent -FilePath $App7Path -PassThru
+                            
+                        } Else {
+                            $Script:App7 = Start-Process -WorkingDirectory $App7Parent -FilePath $App7Path -Credential $Creds -PassThru
+                        }
+                    } Catch{
+                        Show-Message -Message "App7 failed to launch, maybe try setting it to run as admin in the config?"
+                    }
+                }
+                IF ($Options.$Game.AppPath8){
+                    Write-Host "Starting Aux app 8"
+                    Try {
+                        $App8Path = $Options.$Game.AppPath8
+                        $App8Parent = Split-Path "$App8Path" -Parent
+                        IF ($Options.$Game.App8AsAdmin -eq $true) {
+                            $Script:App8 = Start-Process -WorkingDirectory $App8Parent -FilePath $App8Path -PassThru
+                            
+                        } Else {
+                            $Script:App8 = Start-Process -WorkingDirectory $App8Parent -FilePath $App8Path -Credential $Creds -PassThru
+                        }
+                    } Catch{
+                        Show-Message -Message "App8 failed to launch, maybe try setting it to run as admin in the config?"
+                    }
+                }
+                IF ($Options.$Game.AppPath9){
+                    Write-Host "Starting Aux app 9"
+                    Try {
+                        $App9Path = $Options.$Game.AppPath9
+                        $App9Parent = Split-Path "$App9Path" -Parent
+                        IF ($Options.$Game.App9AsAdmin -eq $true) {
+                            $Script:App9 = Start-Process -WorkingDirectory $App9Parent -FilePath $App9Path -PassThru
+                            
+                        } Else {
+                            $Script:App9 = Start-Process -WorkingDirectory $App9Parent -FilePath $App9Path -Credential $Creds -PassThru
+                        }
+                    } Catch{
+                        Show-Message -Message "App9 failed to launch, maybe try setting it to run as admin in the config?"
+                    }
+                }
+                IF ($Options.$Game.AppPath10){
+                    Write-Host "Starting Aux app 10"
+                    Try {
+                        $App10Path = $Options.$Game.AppPath10
+                        $App10Parent = Split-Path "$App10Path" -Parent
+                        IF ($Options.$Game.App10AsAdmin -eq $true) {
+                            $Script:App10 = Start-Process -WorkingDirectory $App10Parent -FilePath $App10Path -PassThru
+                            
+                        } Else {
+                            $Script:App10 = Start-Process -WorkingDirectory $App10Parent -FilePath $App10Path -Credential $Creds -PassThru
+                        }
+                    } Catch{
+                        Show-Message -Message "App10 failed to launch, maybe try setting it to run as admin in the config?"
+                    }
+                }
                 Write-Host "Starting $Game"
+                $GamePath = $Options.$Game.GamePath
+                $GameParent = Split-Path $GamePath -Parent
                 IF ($Options.$Game.arg1) {
                     If ($Options.$Game.GameAsAdmin.IsChecked -eq $true){
-                        Start-Process -FilePath $Options.$Game.GamePath -ArgumentList $Options.$Game.Arg1
+                        Start-Process -WorkingDirectory $GameParent -FilePath $GamePath -ArgumentList $Options.$Game.Arg1
                     } Else {
-                        Start-Process -FilePath $Options.$Game.GamePath -ArgumentList $Options.$Game.Arg1 -Credential $Creds
+                        Start-Process -WorkingDirectory $GameParent -FilePath $GamePath -ArgumentList $Options.$Game.Arg1 -Credential $Creds
                     }
                 } Else {
                     If ($Options.$Game.GameAsAdmin.IsChecked -eq $true){
-                        Start-Process -FilePath $Options.$Game.GamePath
+                        Start-Process -WorkingDirectory $GameParent -FilePath $GamePath
                     } Else {
-                        Start-Process -FilePath $Options.$Game.GamePath -Credential $Creds
+                        Start-Process -WorkingDirectory $GameParent -FilePath $GamePath -Credential $Creds
                     }
                 }
                 $Splash.Close()
@@ -638,20 +744,44 @@ Function Stop-Game {
         Start-Process -FilePath $Path -ArgumentList "/RunAsAdmin /Disable $SelectedStick"
     }
     IF ($App1) {
-        $null = Stop-Process -InputObject $App1
+        IF (!($App1.HasExited)) {$null = Stop-Process -InputObject $App1}
         $Script:App1 = $false
     }
     IF ($App2) {
-        $null = Stop-Process -InputObject $App2
+        IF (!($App2.HasExited)) {$null = Stop-Process -InputObject $App2}
         $Script:App2 = $false
     }
     IF ($App3) {
-        $null = Stop-Process -InputObject $App3
+        IF (!($App3.HasExited)) {$null = Stop-Process -InputObject $App3}
         $Script:App3 = $false
     }
     IF ($App4) {
-        $null = Stop-Process -InputObject $App4
+        IF (!($App4.HasExited)) {$null = Stop-Process -InputObject $App4}
         $Script:App4 = $false
+    }
+    IF ($App5) {
+        IF (!($App5.HasExited)) {$null = Stop-Process -InputObject $App5}
+        $Script:App5 = $false
+    }
+    IF ($App6) {
+        IF (!($App6.HasExited)) {$null = Stop-Process -InputObject $App6}
+        $Script:App6 = $false
+    }
+    IF ($App7) {
+        IF (!($App7.HasExited)) {$null = Stop-Process -InputObject $App7}
+        $Script:App7 = $false
+    }
+    IF ($App8) {
+        IF (!($App8.HasExited)) {$null = Stop-Process -InputObject $App8}
+        $Script:App8 = $false
+    }
+    IF ($App9) {
+        IF (!($App9.HasExited)) {$null = Stop-Process -InputObject $App9}
+        $Script:App9 = $false
+    }
+    IF ($App10) {
+        IF (!($App10.HasExited)) {$null = Stop-Process -InputObject $App10}
+        $Script:App10 = $false
     }
 }
 
@@ -741,12 +871,15 @@ $xmlMain = @"
         <DockPanel>
             <Menu DockPanel.Dock="Top">
                 <MenuItem Header="_File">
+                    <MenuItem Header="_Clear Blacklist" x:Name="btnClearBlacklist" />
+                    <Separator />
+                    <MenuItem Header="_Exit" x:Name="btnExit" />
+                </MenuItem>
+                <MenuItem Header="_Configurations">
                     <MenuItem Header="_Change Config" x:Name="btnEditGame" />
                     <MenuItem Header="_New Config" x:Name="btnNewGame" />
                     <Separator />
                     <MenuItem Header="_Delete Config" x:Name="btnDelete" />
-                    <Separator />
-                    <MenuItem Header="_Clear Blacklist" x:Name="btnClearBlacklist" />
                 </MenuItem>
                 <MenuItem Header="_Help">
                     <MenuItem Header="Check for Updates on Startup" x:Name="chkVersion" IsCheckable="True" />
@@ -768,100 +901,144 @@ $xmlMain = @"
                 <Button Content="All Off" x:Name="btnAllOff" ToolTip="Turn off all controllers from all configurations" Height="25" Width="90" Margin="5"/>
             </StackPanel>
         </StackPanel>
-        <StackPanel Background="#eae4ee" x:Name="stackEdit" Margin="10">
+        <StackPanel Background="#eae4ee" x:Name="stackEdit" Margin="10" Orientation="Vertical">
             <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
                 <Label Width="70" Height="25" Padding="3" Margin="5">Name</Label>
                 <TextBox x:Name="txtGameName" Width = "300" Height="25" Padding="3" Margin="5"/>
             </StackPanel>
-            <StackPanel Background="#66ffcc">
-                <Label FontSize="25" Height="50" Padding="3" Margin="0">Paths</Label>
-            </StackPanel>
-            <StackPanel Margin="5 0 0 5" Orientation="Horizontal" HorizontalAlignment="Left">
-                <Label Width="70" Height="25" Padding="3" Margin="5">Game Path</Label>
-                <TextBox x:Name="txtGamePath" Width = "300" Height="25" Padding="3" Margin="5"/>
-                <Button x:Name="btnBrowseGame" Content="Browse" ToolTip="Select Game executable/launcher" Height="25" Width="100" Margin="5"/>
-                <CheckBox x:Name="chkGameAsAdmin" Content="Run as admin" ToolTip="Check to run the game as administrator" Margin="5"/>
-            </StackPanel>
-            <StackPanel Margin="5 0 0 5" Orientation="Horizontal" HorizontalAlignment="Left">    
-                    <Label Width="70" Height="25" Padding="3" Margin="5">Switches</Label>
-                    <TextBox x:Name="txtGameArgs" Width = "150" Height="25" Padding="3" Margin="5"/>
+            <StackPanel x:Name="StackSections" Orientation="Horizontal">
+                <StackPanel x:Name="StackPaths" Orientation="Vertical">
+                    <StackPanel Background="#66ffcc">
+                        <Label FontSize="25" Height="50" Padding="3" Margin="0">Paths</Label>
+                    </StackPanel>
+                    <StackPanel Margin="5 0 0 5" Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Label Width="70" Height="25" Padding="3" Margin="5">Game Path</Label>
+                        <TextBox x:Name="txtGamePath" Width = "300" Height="25" Padding="3" Margin="5"/>
+                        <Button x:Name="btnBrowseGame" Content="Browse" ToolTip="Select Game executable/launcher" Height="25" Width="100" Margin="5"/>
+                        <CheckBox x:Name="chkGameAsAdmin" Content="Run as admin" ToolTip="Check to run the game as administrator" Margin="5"/>
+                    </StackPanel>
+                    <StackPanel Margin="5 0 0 5" Orientation="Horizontal" HorizontalAlignment="Left">    
+                        <Label Width="70" Height="25" Padding="3" Margin="5">Switches</Label>
+                        <TextBox x:Name="txtGameArgs" Width = "150" Height="25" Padding="3" Margin="5"/>
+                    </StackPanel>
+                    <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Label Width="70" Height="25" Padding="3" Margin="5">App1 Path</Label>
+                        <TextBox x:Name="txtAppPath1" Width = "300" Height="25" Padding="3" Margin="5"/>
+                        <Button x:Name="btnBrowseApp1" Content="Browse" ToolTip="Browse to select Optional support app 1" Height="25" Width="100" Margin="5"/>
+                        <CheckBox x:Name="chkApp1AsAdmin" Content="Run as admin" ToolTip="Check to run App 1 as administrator" Margin="5"/>
+                    </StackPanel>
+                    <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Label Width="70" Height="25" Padding="3" Margin="5">App2 Path</Label>
+                        <TextBox x:Name="txtAppPath2" Width = "300" Height="25" Padding="3" Margin="5"/>
+                        <Button x:Name="btnBrowseApp2" Content="Browse" ToolTip="Browse to select Optional support app 2" Height="25" Width="100" Margin="5"/>
+                        <CheckBox x:Name="chkApp2AsAdmin" Content="Run as admin" ToolTip="Check to run App 2 as administrator" Margin="5"/>
+                    </StackPanel>
+                    <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Label Width="70" Height="25" Padding="3" Margin="5">App3 Path</Label>
+                        <TextBox x:Name="txtAppPath3" Width = "300" Height="25" Padding="3" Margin="5"/>
+                        <Button x:Name="btnBrowseApp3" Content="Browse" ToolTip="Browse to select Optional support app 3" Height="25" Width="100" Margin="5"/>
+                        <CheckBox x:Name="chkApp3AsAdmin" Content="Run as admin" ToolTip="Check to run App 3 as administrator" Margin="5"/>
+                    </StackPanel>
+                    <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Label Width="70" Height="25" Padding="3" Margin="5">App4 Path</Label>
+                        <TextBox x:Name="txtAppPath4" Width = "300" Height="25" Padding="3" Margin="5"/>
+                        <Button x:Name="btnBrowseApp4" Content="Browse" ToolTip="Browse to select Optional support app 4" Height="25" Width="100" Margin="5"/>
+                        <CheckBox x:Name="chkApp4AsAdmin" Content="Run as admin" ToolTip="Check to run App 4 as administrator" Margin="5"/>
+                    </StackPanel>
+                    <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Label Width="70" Height="25" Padding="3" Margin="5">App5 Path</Label>
+                        <TextBox x:Name="txtAppPath5" Width = "300" Height="25" Padding="3" Margin="5"/>
+                        <Button x:Name="btnBrowseApp5" Content="Browse" ToolTip="Browse to select Optional support app 5" Height="25" Width="100" Margin="5"/>
+                        <CheckBox x:Name="chkApp5AsAdmin" Content="Run as admin" ToolTip="Check to run App 5 as administrator" Margin="5"/>
+                    </StackPanel>
+                    <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Label Width="70" Height="25" Padding="3" Margin="5">App6 Path</Label>
+                        <TextBox x:Name="txtAppPath6" Width = "300" Height="25" Padding="3" Margin="5"/>
+                        <Button x:Name="btnBrowseApp6" Content="Browse" ToolTip="Browse to select Optional support app 6" Height="25" Width="100" Margin="5"/>
+                        <CheckBox x:Name="chkApp6AsAdmin" Content="Run as admin" ToolTip="Check to run App 6 as administrator" Margin="5"/>
+                    </StackPanel>
+                    <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Label Width="70" Height="25" Padding="3" Margin="5">App7 Path</Label>
+                        <TextBox x:Name="txtAppPath7" Width = "300" Height="25" Padding="3" Margin="5"/>
+                        <Button x:Name="btnBrowseApp7" Content="Browse" ToolTip="Browse to select Optional support app 7" Height="25" Width="100" Margin="5"/>
+                        <CheckBox x:Name="chkApp7AsAdmin" Content="Run as admin" ToolTip="Check to run App 7 as administrator" Margin="5"/>
+                    </StackPanel>
+                    <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Label Width="70" Height="25" Padding="3" Margin="5">App8 Path</Label>
+                        <TextBox x:Name="txtAppPath8" Width = "300" Height="25" Padding="3" Margin="5"/>
+                        <Button x:Name="btnBrowseApp8" Content="Browse" ToolTip="Browse to select Optional support app 8" Height="25" Width="100" Margin="5"/>
+                        <CheckBox x:Name="chkApp8AsAdmin" Content="Run as admin" ToolTip="Check to run App 8 as administrator" Margin="5"/>
+                    </StackPanel>
+                    <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Label Width="70" Height="25" Padding="3" Margin="5">App9 Path</Label>
+                        <TextBox x:Name="txtAppPath9" Width = "300" Height="25" Padding="3" Margin="5"/>
+                        <Button x:Name="btnBrowseApp9" Content="Browse" ToolTip="Browse to select Optional support app 9" Height="25" Width="100" Margin="5"/>
+                        <CheckBox x:Name="chkApp9AsAdmin" Content="Run as admin" ToolTip="Check to run App 9 as administrator" Margin="5"/>
+                    </StackPanel>
+                    <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Label Width="70" Height="25" Padding="3" Margin="5">App10 Path</Label>
+                        <TextBox x:Name="txtAppPath10" Width = "300" Height="25" Padding="3" Margin="5"/>
+                        <Button x:Name="btnBrowseApp10" Content="Browse" ToolTip="Browse to select Optional support app 10" Height="25" Width="100" Margin="5"/>
+                        <CheckBox x:Name="chkApp10AsAdmin" Content="Run as admin" ToolTip="Check to run App 10 as administrator" Margin="5"/>
+                    </StackPanel>
                 </StackPanel>
-            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
-                <Label Width="70" Height="25" Padding="3" Margin="5">App1 Path</Label>
-                <TextBox x:Name="txtAppPath1" Width = "300" Height="25" Padding="3" Margin="5"/>
-                <Button x:Name="btnBrowseApp1" Content="Browse" ToolTip="Browse to select Optional support app 1" Height="25" Width="100" Margin="5"/>
-                <CheckBox x:Name="chkApp1AsAdmin" Content="Run as admin" ToolTip="Check to run App 1 as administrator" Margin="5"/>
-            </StackPanel>
-            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
-                <Label Width="70" Height="25" Padding="3" Margin="5">App2 Path</Label>
-                <TextBox x:Name="txtAppPath2" Width = "300" Height="25" Padding="3" Margin="5"/>
-                <Button x:Name="btnBrowseApp2" Content="Browse" ToolTip="Browse to select Optional support app 2" Height="25" Width="100" Margin="5"/>
-                <CheckBox x:Name="chkApp2AsAdmin" Content="Run as admin" ToolTip="Check to run App 2 as administrator" Margin="5"/>
-            </StackPanel>
-            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
-                <Label Width="70" Height="25" Padding="3" Margin="5">App3 Path</Label>
-                <TextBox x:Name="txtAppPath3" Width = "300" Height="25" Padding="3" Margin="5"/>
-                <Button x:Name="btnBrowseApp3" Content="Browse" ToolTip="Browse to select Optional support app 3" Height="25" Width="100" Margin="5"/>
-                <CheckBox x:Name="chkApp3AsAdmin" Content="Run as admin" ToolTip="Check to run App 3 as administrator" Margin="5"/>
-            </StackPanel>
-            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
-                <Label Width="70" Height="25" Padding="3" Margin="5">App4 Path</Label>
-                <TextBox x:Name="txtAppPath4" Width = "300" Height="25" Padding="3" Margin="5"/>
-                <Button x:Name="btnBrowseApp4" Content="Browse" ToolTip="Browse to select Optional support app 4" Height="25" Width="100" Margin="5"/>
-                <CheckBox x:Name="chkApp4AsAdmin" Content="Run as admin" ToolTip="Check to run App 4 as administrator" Margin="5"/>
-            </StackPanel>
-            <StackPanel Background="#66ffcc">
-                <Label FontSize="25" Height="50" Padding="0" Margin="0">Controllers</Label>
-            </StackPanel>
-            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
-                <Label Width="75" Height="25" Padding="3" Margin="5">Controller 1</Label>
-                <Label x:Name="lblJoy1" Width="300" Height="25" Padding="3" Margin="5" Background="white" />
-                <Button x:Name="btnJoy1" Content="Select" ToolTip="Browse to select Controller 1" Height="25" Width="100" Margin="5"/>
-            </StackPanel>
-            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
-                <Label Width="75" Height="25" Padding="3" Margin="5">Controller 2</Label>
-                <Label x:Name="lblJoy2" Width="300" Height="25" Padding="3" Margin="5" Background="white"/>
-                <Button x:Name="btnJoy2" Content="Select" ToolTip="Browse to select Controller 2" Height="25" Width="100" Margin="5"/>
-            </StackPanel>
-            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
-                <Label Width="75" Height="25" Padding="3" Margin="5">Controller 3</Label>
-                <Label x:Name="lblJoy3" Width="300" Height="25" Padding="3" Margin="5" Background="white"/>
-                <Button x:Name="btnJoy3" Content="Select" ToolTip="Browse to select Controller 3" Height="25" Width="100" Margin="5"/>
-            </StackPanel>
-            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
-                <Label Width="75" Height="25" Padding="3" Margin="5">Controller 4</Label>
-                <Label x:Name="lblJoy4" Width="300" Height="25" Padding="3" Margin="5" Background="white"/>
-                <Button x:Name="btnJoy4" Content="Select" ToolTip="Browse to select Controller 4" Height="25" Width="100" Margin="5"/>
-            </StackPanel>
-            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
-                <Label Width="75" Height="25" Padding="3" Margin="5">Controller 5</Label>
-                <Label x:Name="lblJoy5" Width="300" Height="25" Padding="3" Margin="5" Background="white"/>
-                <Button x:Name="btnJoy5" Content="Select" ToolTip="Browse to select Controller 5" Height="25" Width="100" Margin="5"/>
-            </StackPanel>
-            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
-                <Label Width="75" Height="25" Padding="3" Margin="5">Controller 6</Label>
-                <Label x:Name="lblJoy6" Width="300" Height="25" Padding="3" Margin="5" Background="white"/>
-                <Button x:Name="btnJoy6" Content="Select" ToolTip="Browse to select Controller 6" Height="25" Width="100" Margin="5"/>
-            </StackPanel>
-            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
-                <Label Width="75" Height="25" Padding="3" Margin="5">Controller 7</Label>
-                <Label x:Name="lblJoy7" Width="300" Height="25" Padding="3" Margin="5" Background="white"/>
-                <Button x:Name="btnJoy7" Content="Select" ToolTip="Browse to select Controller 7" Height="25" Width="100" Margin="5"/>
-            </StackPanel>
-            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
-                <Label Width="75" Height="25" Padding="3" Margin="5">Controller 8</Label>
-                <Label x:Name="lblJoy8" Width="300" Height="25" Padding="3" Margin="5" Background="white"/>
-                <Button x:Name="btnJoy8" Content="Select" ToolTip="Browse to select Controller 8" Height="25" Width="100" Margin="5"/>
-            </StackPanel>
-            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
-                <Label Width="75" Height="25" Padding="3" Margin="5">Controller 9</Label>
-                <Label x:Name="lblJoy9" Width="300" Height="25" Padding="3" Margin="5" Background="white"/>
-                <Button x:Name="btnJoy9" Content="Select" ToolTip="Browse to select Controller 9" Height="25" Width="100" Margin="5"/>
-            </StackPanel>
-            <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
-                <Label Width="75" Height="25" Padding="3" Margin="5">Controller 10</Label>
-                <Label x:Name="lblJoy10" Width="300" Height="25" Padding="3" Margin="5" Background="white"/>
-                <Button x:Name="btnJoy10" Content="Select" ToolTip="Browse to select Controller 10" Height="25" Width="100" Margin="5"/>
+                <StackPanel x:Name="Separater" Width="10" Background="#66ffcc">
+                </StackPanel>
+                <StackPanel x:Name="StackControllers" Orientation="Vertical">
+                    <StackPanel Background="#66ffcc">
+                        <Label FontSize="25" Height="50" Padding="0" Margin="0">Controllers</Label>
+                    </StackPanel>
+                    <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Label Width="75" Height="25" Padding="3" Margin="5">Controller 1</Label>
+                        <Label x:Name="lblJoy1" Width="300" Height="25" Padding="3" Margin="5" Background="white" />
+                        <Button x:Name="btnJoy1" Content="Select" ToolTip="Browse to select Controller 1" Height="25" Width="100" Margin="5"/>
+                    </StackPanel>
+                    <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Label Width="75" Height="25" Padding="3" Margin="5">Controller 2</Label>
+                        <Label x:Name="lblJoy2" Width="300" Height="25" Padding="3" Margin="5" Background="white"/>
+                        <Button x:Name="btnJoy2" Content="Select" ToolTip="Browse to select Controller 2" Height="25" Width="100" Margin="5"/>
+                    </StackPanel>
+                    <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Label Width="75" Height="25" Padding="3" Margin="5">Controller 3</Label>
+                        <Label x:Name="lblJoy3" Width="300" Height="25" Padding="3" Margin="5" Background="white"/>
+                        <Button x:Name="btnJoy3" Content="Select" ToolTip="Browse to select Controller 3" Height="25" Width="100" Margin="5"/>
+                    </StackPanel>
+                    <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Label Width="75" Height="25" Padding="3" Margin="5">Controller 4</Label>
+                        <Label x:Name="lblJoy4" Width="300" Height="25" Padding="3" Margin="5" Background="white"/>
+                        <Button x:Name="btnJoy4" Content="Select" ToolTip="Browse to select Controller 4" Height="25" Width="100" Margin="5"/>
+                    </StackPanel>
+                    <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Label Width="75" Height="25" Padding="3" Margin="5">Controller 5</Label>
+                        <Label x:Name="lblJoy5" Width="300" Height="25" Padding="3" Margin="5" Background="white"/>
+                        <Button x:Name="btnJoy5" Content="Select" ToolTip="Browse to select Controller 5" Height="25" Width="100" Margin="5"/>
+                    </StackPanel>
+                    <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Label Width="75" Height="25" Padding="3" Margin="5">Controller 6</Label>
+                        <Label x:Name="lblJoy6" Width="300" Height="25" Padding="3" Margin="5" Background="white"/>
+                        <Button x:Name="btnJoy6" Content="Select" ToolTip="Browse to select Controller 6" Height="25" Width="100" Margin="5"/>
+                    </StackPanel>
+                    <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Label Width="75" Height="25" Padding="3" Margin="5">Controller 7</Label>
+                        <Label x:Name="lblJoy7" Width="300" Height="25" Padding="3" Margin="5" Background="white"/>
+                        <Button x:Name="btnJoy7" Content="Select" ToolTip="Browse to select Controller 7" Height="25" Width="100" Margin="5"/>
+                    </StackPanel>
+                    <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Label Width="75" Height="25" Padding="3" Margin="5">Controller 8</Label>
+                        <Label x:Name="lblJoy8" Width="300" Height="25" Padding="3" Margin="5" Background="white"/>
+                        <Button x:Name="btnJoy8" Content="Select" ToolTip="Browse to select Controller 8" Height="25" Width="100" Margin="5"/>
+                    </StackPanel>
+                    <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Label Width="75" Height="25" Padding="3" Margin="5">Controller 9</Label>
+                        <Label x:Name="lblJoy9" Width="300" Height="25" Padding="3" Margin="5" Background="white"/>
+                        <Button x:Name="btnJoy9" Content="Select" ToolTip="Browse to select Controller 9" Height="25" Width="100" Margin="5"/>
+                    </StackPanel>
+                    <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Label Width="75" Height="25" Padding="3" Margin="5">Controller 10</Label>
+                        <Label x:Name="lblJoy10" Width="300" Height="25" Padding="3" Margin="5" Background="white"/>
+                        <Button x:Name="btnJoy10" Content="Select" ToolTip="Browse to select Controller 10" Height="25" Width="100" Margin="5"/>
+                    </StackPanel>
+                </StackPanel>
             </StackPanel>
             <StackPanel Background="#66ffcc">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
@@ -1140,6 +1317,12 @@ $chkApp1AsAdmin = $Window.FindName('chkApp1AsAdmin')
 $chkApp2AsAdmin = $Window.FindName('chkApp2AsAdmin')
 $chkApp3AsAdmin = $Window.FindName('chkApp3AsAdmin')
 $chkApp4AsAdmin = $Window.FindName('chkApp4AsAdmin')
+$chkApp5AsAdmin = $Window.FindName('chkApp5AsAdmin')
+$chkApp6AsAdmin = $Window.FindName('chkApp6AsAdmin')
+$chkApp7AsAdmin = $Window.FindName('chkApp7AsAdmin')
+$chkApp8AsAdmin = $Window.FindName('chkApp8AsAdmin')
+$chkApp9AsAdmin = $Window.FindName('chkApp9AsAdmin')
+$chkApp10AsAdmin = $Window.FindName('chkApp10AsAdmin')
 
 #Populate labels and text boxes with bindings
 $txtGameName = $Window.FindName('txtGameName')
@@ -1148,6 +1331,12 @@ $txtAppPath1 = $Window.FindName('txtAppPath1')
 $txtAppPath2 = $Window.FindName('txtAppPath2')
 $txtAppPath3 = $Window.FindName('txtAppPath3')
 $txtAppPath4 = $Window.FindName('txtAppPath4')
+$txtAppPath5 = $Window.FindName('txtAppPath5')
+$txtAppPath6 = $Window.FindName('txtAppPath6')
+$txtAppPath7 = $Window.FindName('txtAppPath7')
+$txtAppPath8 = $Window.FindName('txtAppPath8')
+$txtAppPath9 = $Window.FindName('txtAppPath9')
+$txtAppPath10 = $Window.FindName('txtAppPath10')
 $lblJoy1 = $Window.FindName('lblJoy1')
 $lblJoy2 = $Window.FindName('lblJoy2')
 $lblJoy3 = $Window.FindName('lblJoy3')
@@ -1161,6 +1350,10 @@ $lblJoy10 = $Window.FindName('lblJoy10')
 $txtGameArgs = $Window.FindName('txtGameArgs')
 
 #Assign bindings for some buttons and click actions for them
+$btnExit = $Window.FindName('btnExit')
+$btnExit.Add_Click({
+    $Window.Close()
+})
 $btnAbout = $Window.FindName('btnAbout')
 $btnAbout.Add_Click({
     $About = Import-Xaml -xvar $xmlAbout
@@ -1269,6 +1462,30 @@ $btnBrowseApp4 = $Window.FindName('btnBrowseApp4')
 $btnBrowseApp4.Add_Click({
     $txtAppPath4.Text = Get-FilePath
 })
+$btnBrowseApp5 = $Window.FindName('btnBrowseApp5')
+$btnBrowseApp5.Add_Click({
+    $txtAppPath5.Text = Get-FilePath
+})
+$btnBrowseApp6 = $Window.FindName('btnBrowseApp6')
+$btnBrowseApp6.Add_Click({
+    $txtAppPath6.Text = Get-FilePath
+})
+$btnBrowseApp7 = $Window.FindName('btnBrowseApp7')
+$btnBrowseApp7.Add_Click({
+    $txtAppPath7.Text = Get-FilePath
+})
+$btnBrowseApp8 = $Window.FindName('btnBrowseApp8')
+$btnBrowseApp8.Add_Click({
+    $txtAppPath8.Text = Get-FilePath
+})
+$btnBrowseApp9 = $Window.FindName('btnBrowseApp9')
+$btnBrowseApp9.Add_Click({
+    $txtAppPath9.Text = Get-FilePath
+})
+$btnBrowseApp10 = $Window.FindName('btnBrowseApp10')
+$btnBrowseApp10.Add_Click({
+    $txtAppPath10.Text = Get-FilePath
+})
 
 #Populate the Joysticks textboxes using a Controller picker
 $btnJoy1 = $Window.FindName('btnJoy1')
@@ -1356,6 +1573,18 @@ $btnSaveGame.Add_Click({
             App3AsAdmin = $chkApp3AsAdmin.IsChecked
             AppPath4 = $txtAppPath4.Text
             App4AsAdmin = $chkApp4AsAdmin.IsChecked
+            AppPath5 = $txtAppPath5.Text
+            App5AsAdmin = $chkApp5AsAdmin.IsChecked
+            AppPath6 = $txtAppPath6.Text
+            App6AsAdmin = $chkApp6AsAdmin.IsChecked
+            AppPath7 = $txtAppPath7.Text
+            App7AsAdmin = $chkApp7AsAdmin.IsChecked
+            AppPath8 = $txtAppPath8.Text
+            App8AsAdmin = $chkApp8AsAdmin.IsChecked
+            AppPath9 = $txtAppPath9.Text
+            App9AsAdmin = $chkApp9AsAdmin.IsChecked
+            AppPath10 = $txtAppPath10.Text
+            App10AsAdmin = $chkApp10AsAdmin.IsChecked
             Arg1 = $txtGameArgs.Text
             Selections = [PSCustomObject]@{
                 Stick1=$lblJoy1.Content
@@ -1417,6 +1646,19 @@ $btnNewGame.Add_Click({
     IF ($null -ne $Options.$Game.App3AsAdmin) {$chkApp3AsAdmin.IsChecked = $Options.$Game.App3AsAdmin} Else {$chkApp3AsAdmin.IsChecked = $false}
     $txtAppPath4.Text = $Options.$Game.AppPath4
     IF ($null -ne $Options.$Game.App4AsAdmin) {$chkApp4AsAdmin.IsChecked = $Options.$Game.App4AsAdmin} Else {$chkApp4AsAdmin.IsChecked = $false}
+    $txtAppPath5.Text = $Options.$Game.AppPath5
+    IF ($null -ne $Options.$Game.App5AsAdmin) {$chkApp5AsAdmin.IsChecked = $Options.$Game.App5AsAdmin} Else {$chkApp5AsAdmin.IsChecked = $false}
+    $txtAppPath6.Text = $Options.$Game.AppPath6
+    IF ($null -ne $Options.$Game.App6AsAdmin) {$chkApp6AsAdmin.IsChecked = $Options.$Game.App6AsAdmin} Else {$chkApp6AsAdmin.IsChecked = $false}
+    $txtAppPath7.Text = $Options.$Game.AppPath7
+    IF ($null -ne $Options.$Game.App7AsAdmin) {$chkApp7AsAdmin.IsChecked = $Options.$Game.App7AsAdmin} Else {$chkApp7AsAdmin.IsChecked = $false}
+    $txtAppPath8.Text = $Options.$Game.AppPath8
+    IF ($null -ne $Options.$Game.App8AsAdmin) {$chkApp8AsAdmin.IsChecked = $Options.$Game.App8AsAdmin} Else {$chkApp8AsAdmin.IsChecked = $false}
+    $txtAppPath9.Text = $Options.$Game.AppPath9
+    IF ($null -ne $Options.$Game.App9AsAdmin) {$chkApp9AsAdmin.IsChecked = $Options.$Game.App9AsAdmin} Else {$chkApp9AsAdmin.IsChecked = $false}
+    $txtAppPath10.Text = $Options.$Game.AppPath10
+    IF ($null -ne $Options.$Game.App10AsAdmin) {$chkApp10AsAdmin.IsChecked = $Options.$Game.App10AsAdmin} Else {$chkApp10AsAdmin.IsChecked = $false}
+    
     $txtGameArgs.Text = $Options.$Game.Arg1
     $lblJoy1.Content = $Options.$Game.Selections.Stick1
     $lblJoy2.Content = $Options.$Game.Selections.Stick2
@@ -1451,6 +1693,18 @@ $btnEditGame.Add_Click({
         IF ($null -ne $Options.$Game.App3AsAdmin) {$chkApp3AsAdmin.IsChecked = $Options.$Game.App3AsAdmin} Else {$chkApp3AsAdmin.IsChecked = $false}
         $txtAppPath4.Text = $Options.$Game.AppPath4
         IF ($null -ne $Options.$Game.App4AsAdmin) {$chkApp4AsAdmin.IsChecked = $Options.$Game.App4AsAdmin} Else {$chkApp4AsAdmin.IsChecked = $false}
+        $txtAppPath5.Text = $Options.$Game.AppPath5
+        IF ($null -ne $Options.$Game.App5AsAdmin) {$chkApp5AsAdmin.IsChecked = $Options.$Game.App5AsAdmin} Else {$chkApp5AsAdmin.IsChecked = $false}
+        $txtAppPath6.Text = $Options.$Game.AppPath6
+        IF ($null -ne $Options.$Game.App6AsAdmin) {$chkApp6AsAdmin.IsChecked = $Options.$Game.App6AsAdmin} Else {$chkApp6AsAdmin.IsChecked = $false}
+        $txtAppPath7.Text = $Options.$Game.AppPath7
+        IF ($null -ne $Options.$Game.App7AsAdmin) {$chkApp7AsAdmin.IsChecked = $Options.$Game.App7AsAdmin} Else {$chkApp7AsAdmin.IsChecked = $false}
+        $txtAppPath8.Text = $Options.$Game.AppPath8
+        IF ($null -ne $Options.$Game.App8AsAdmin) {$chkApp8AsAdmin.IsChecked = $Options.$Game.App8AsAdmin} Else {$chkApp8AsAdmin.IsChecked = $false}
+        $txtAppPath9.Text = $Options.$Game.AppPath9
+        IF ($null -ne $Options.$Game.App9AsAdmin) {$chkApp9AsAdmin.IsChecked = $Options.$Game.App9AsAdmin} Else {$chkApp9AsAdmin.IsChecked = $false}
+        $txtAppPath10.Text = $Options.$Game.AppPath10
+        IF ($null -ne $Options.$Game.App10AsAdmin) {$chkApp10AsAdmin.IsChecked = $Options.$Game.App10AsAdmin} Else {$chkApp10AsAdmin.IsChecked = $false}
         $txtGameArgs.Text = $Options.$Game.Arg1
         $lblJoy1.Content = $Options.$Game.Selections.Stick1
         $lblJoy2.Content = $Options.$Game.Selections.Stick2
