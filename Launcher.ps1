@@ -850,8 +850,8 @@ $xmlMain = @"
                 <Label Padding="3"></Label>
                 </StackPanel>
                 <StackPanel x:Name="stackControls" Margin="0" Orientation="Vertical" HorizontalAlignment="Center">
-                <Button Content="Controllers On" x:Name="btnControllersOn" ToolTip="Turn on selected controllers from all configurations" Height="25" Width="150" Margin="5"/>
-                <Button Content="Controllers Off" x:Name="btnControllersOff" ToolTip="Turn off selected controllers from all configurations" Height="25" Width="150" Margin="5"/>
+                <Button Content="Controllers On" x:Name="btnControllersOn" ToolTip="Turn on selected controllers from this configuration" Height="25" Width="150" Margin="5"/>
+                <Button Content="Controllers Off" x:Name="btnControllersOff" ToolTip="Turn off selected controllers from this configuration" Height="25" Width="150" Margin="5"/>
             </StackPanel>
         </StackPanel>
         <StackPanel Background="#eae4ee" x:Name="stackEdit" Margin="10" Orientation="Vertical">
