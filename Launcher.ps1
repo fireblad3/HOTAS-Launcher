@@ -76,11 +76,18 @@ v1.0.5.0    Fixed some apps not loading by Adding -WorkingDirectory to all start
             Made some gui changes to accomodate the extra paths on a smaller screen
             Added a Configurations menu and moved all configuration stuff in there
             Added an Exit button to the file menu.
+v1.0.6.0    Created a new Controllers menu.
+            Changed the All on and All off buttons that were on the main window to Controllers on and Controllers off. These buttons turn only the controllers for that configuration on.
+            Moved All on and All off into the new controllers menu.
+            Created a Configure Blacklist button in the controllers menu.
+            Moved the Clear Blacklist button into the controllers menu.
+            Modified the Get-Controller function to facilitate the new blacklist flow.
+            Fixed a bug where updating the blacklist did not occur until after you restarted the app.
 #>
 param(
 [switch]$Elevated
 )
-$version = "v1.0.5.0"
+$version = "v1.0.6.0"
 $Testing = $false
 IF ($Testing) {
     $style = "Normal"
@@ -295,107 +302,27 @@ Function Get-Joysticks {
     $Sticks
 }
 
-Function Get-Joystick-old {
-    param(
-        $Joysticks,
-        $Settings,
-        $MyAppData
-    )
-    Add-Type -AssemblyName System.Windows.Forms
-    Add-Type -AssemblyName System.Drawing
-
-    $form = New-Object System.Windows.Forms.Form
-    $form.Text = 'Select a Controller'
-    $form.Size = New-Object System.Drawing.Size(500,500)
-    $form.StartPosition = 'CenterScreen'
-
-    $okButton = New-Object System.Windows.Forms.Button
-    $okButton.Location = New-Object System.Drawing.Point(75,425)
-    $okButton.Size = New-Object System.Drawing.Size(75,23)
-    $okButton.Text = 'Add'
-    $okButton.DialogResult = [System.Windows.Forms.DialogResult]::OK
-    $okButton.Add_Click{
-        $Script:x = $listBox.SelectedItem
-    }
-    $form.AcceptButton = $okButton
-    $form.Controls.Add($okButton)
-
-    $cancelButton = New-Object System.Windows.Forms.Button
-    $cancelButton.Location = New-Object System.Drawing.Point(150,425)
-    $cancelButton.Size = New-Object System.Drawing.Size(75,23)
-    $cancelButton.Text = 'Close'
-    $cancelButton.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
-    $form.CancelButton = $cancelButton
-    $form.Controls.Add($cancelButton)
-
-    $label = New-Object System.Windows.Forms.Label
-    $label.Location = New-Object System.Drawing.Point(10,20)
-    $label.Size = New-Object System.Drawing.Size(280,20)
-    $label.Text = 'Please select a Controller and click Add or add to blacklist:'
-    $form.Controls.Add($label)
-
-    $listBox = New-Object System.Windows.Forms.ListBox
-    $listBox.Location = New-Object System.Drawing.Point(10,60)
-    $listBox.Size = New-Object System.Drawing.Size(400,350)
-
-    $blButton = New-Object System.Windows.Forms.Button
-    $blButton.Location = New-Object System.Drawing.Point(250,425)
-    $blButton.Size = New-Object System.Drawing.Size(100,23)
-    $blButton.Text = 'Add to Blacklist'
-    $blButton.DialogResult = [System.Windows.Forms.DialogResult]::Abort
-    $blButton.Add_Click{
-        $x = $listBox.SelectedItem
-        $listBox.Items.Remove($x)
-        Try {
-            $Settings.blacklist += $x 
-        } Catch {
-            $Settings | Add-Member -NotePropertyName "blacklist" -NotePropertyValue @($x)
-        }
-        $Settings | ConvertTo-Json | Out-File -FilePath "$MyAppData\Settings.json"
-        $Script:Joysticks = $Joysticks | Where-Object { $_.Name -notMatch ($x) }
-    }
-    $form.Controls.Add($blButton)
-
-    $sticks = foreach($item in $Joysticks){
-        $Item.Name
-    }
-    Foreach ($stick in $sticks ) {
-        [void] $listBox.Items.Add($stick)
-    }
-
-    $form.Controls.Add($listBox)
-
-    $form.Topmost = $true
-
-    $result = $form.ShowDialog()
-
-    if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
-        $x
-    } Else {
-        if ($result -eq [System.Windows.Forms.DialogResult]::Cancel){
-            $null
-        } Else {
-            $false
-        }
-        
-        #$false
-    }
-    
-}
-
 Function Get-Controller {
     param(
         $Joysticks,
         $Settings,
         $MyAppData,
-        $xml
+        $xml,
+        [Switch]$Setup
     )
     #Create the Window
     $WindowController = Import-Xaml -xvar $xml
     #Place Buttons and connect to them on the form
+    
     $btnOk = $WindowController.FindName('btnOk')
     $btnOk.Add_Click({
         $WindowController.Tag = $lstController.SelectedItem
+        $WindowController.Close()
+    })
+    $btnSave = $WindowController.FindName('btnSave')
+    $btnSave.Add_Click({
+        $WindowController.Tag = 'yes'
+        $Settings | ConvertTo-Json | Out-File -FilePath "$MyAppData\Settings.json"
         $WindowController.Close()
     })
     $btnCancel=$WindowController.FindName('btnCancel')
@@ -410,15 +337,14 @@ Function Get-Controller {
                 $lstControllerCollection.Remove($i)
             }
             Try {
-                IF ($Settings.blacklist -notcontains $i) {
-                    $Settings.blacklist += $i 
+                IF ($Script:Settings.blacklist -notcontains $i) {
+                    $Script:Settings.blacklist += $i 
                 }
             } Catch {
-                $Settings | Add-Member -NotePropertyName "blacklist" -NotePropertyValue @($i)
+                $Script:Settings | Add-Member -NotePropertyName "blacklist" -NotePropertyValue @($i)
             }
-            $Script:Joysticks = $Joysticks | Where-Object { $_.Name -notMatch ($i) }
+            #$Script:Joysticks = $Joysticks | Where-Object { $_.Name -notMatch ($i) }
         }
-        $Settings | ConvertTo-Json | Out-File -FilePath "$MyAppData\Settings.json"
     }
    
     #connect to the listbox
@@ -435,6 +361,14 @@ Function Get-Controller {
     
     # Make sure Window is on Top?
     
+    #If setup is tru change how the form looks
+    IF ($Setup){
+        $btnOk.Visibility = "Collapsed"
+        #$btnCancel.Visibility = "Collapsed"
+    } Else {
+        $btnSave.Visibility = "Collapsed"
+        $btnBlacklist.Visibility = "Collapsed"
+    }
 
     # Show the Window and return the result
     $null = $WindowController.ShowDialog()
@@ -503,7 +437,7 @@ Function Start-Game {
             }
         }
         
-        # Turn it all On
+        # Turn On Controllers
         IF (!($NoApps)){
             ForEach ($Selection in $Selections) {
                 While ($Try -ne 'No'){
@@ -551,6 +485,7 @@ Function Start-Game {
             $Splash.Close()
             Return
         }
+        #Start the Supporting Apps
         IF ($Game) {
             IF ($Game -ne 'DEMO') {
                 IF (!($NoApps)) {
@@ -805,31 +740,42 @@ Function Show-Message {
     $Result
 }
 
-Function Switch-All {
+Function Switch-Controllers {
     Param(
         $Joysticks,
         $Options,
         [Switch]$On,
         [Switch]$Off,
-        $xml
+        $xml,
+        [Switch]$All,
+        $Game
     )
-    
-    $All = @()
-    Foreach($G in $Options.PsObject.Properties) {
-        $Game = $G.Name
+    IF ($All){
+        $Controllers = @()
+        Foreach($G in $Options.PsObject.Properties) {
+            $Game = $G.Name
+            foreach($item in $Options.$Game.Selections.PsObject.Properties) {
+                $i = $Item.value
+                IF ($Null -ne $i -and $i -ne $False){ 
+                    $Controllers += $i
+                }
+            }
+        }
+    } Else {
+        $Controllers = @()
         foreach($item in $Options.$Game.Selections.PsObject.Properties) {
             $i = $Item.value
             IF ($Null -ne $i -and $i -ne $False){ 
-                $all += $i
+                $Controllers += $i
             }
         }
     }
-    $all = $all | Sort-Object -Unique
+    $Controllers = $Controllers | Sort-Object -Unique
 
     IF ($On) {
         $Splash = Import-Xaml -xvar $xml
         $Splash.Add_ContentRendered({
-            ForEach ($Selection in $All) {
+            ForEach ($Selection in $Controllers) {
                 $Stick = $Joysticks | Where-Object {$_.Name -eq $Selection}
                 $SelectedStick = $Stick.ID
                 Start-Process -FilePath $Path -ArgumentList "/RunAsAdmin /enable $SelectedStick"
@@ -840,10 +786,9 @@ Function Switch-All {
         $Splash.ShowDialog() | Out-Null
     }
     IF ($Off) {
-        ForEach ($Selection in $All) {
+        ForEach ($Selection in $Controllers) {
             $Stick = $Joysticks | Where-Object {$_.Name -eq $Selection}
             $SelectedStick = $Stick.ID
-            Write-Host $Stick.ID
             Start-Process -FilePath $Path -ArgumentList "/RunAsAdmin /disable $SelectedStick"
         }
     }
@@ -871,8 +816,6 @@ $xmlMain = @"
         <DockPanel>
             <Menu DockPanel.Dock="Top">
                 <MenuItem Header="_File">
-                    <MenuItem Header="_Clear Blacklist" x:Name="btnClearBlacklist" />
-                    <Separator />
                     <MenuItem Header="_Exit" x:Name="btnExit" />
                 </MenuItem>
                 <MenuItem Header="_Configurations">
@@ -880,6 +823,16 @@ $xmlMain = @"
                     <MenuItem Header="_New Config" x:Name="btnNewGame" />
                     <Separator />
                     <MenuItem Header="_Delete Config" x:Name="btnDelete" />
+                </MenuItem>
+                <MenuItem Header="_Controllers">
+                    <MenuItem Header="_All On" x:Name="btnAllOn" />
+                    <Separator />
+                    <MenuItem Header="_All Off" x:Name="btnAllOff" />
+                    <Separator />
+                    <Separator />
+                    <MenuItem Header="_Configure Blacklist" x:Name="btnConfigureBlacklist" />
+                    <Separator />
+                    <MenuItem Header="_Clear Blacklist" x:Name="btnClearBlacklist" />
                 </MenuItem>
                 <MenuItem Header="_Help">
                     <MenuItem Header="Check for Updates on Startup" x:Name="chkVersion" IsCheckable="True" />
@@ -897,8 +850,8 @@ $xmlMain = @"
                 <Label Padding="3"></Label>
                 </StackPanel>
                 <StackPanel x:Name="stackControls" Margin="0" Orientation="Vertical" HorizontalAlignment="Center">
-                <Button Content="All On" x:Name="btnAllOn" ToolTip="Turn on all controllers from all configurations" Height="25" Width="90" Margin="5"/>
-                <Button Content="All Off" x:Name="btnAllOff" ToolTip="Turn off all controllers from all configurations" Height="25" Width="90" Margin="5"/>
+                <Button Content="Controllers On" x:Name="btnControllersOn" ToolTip="Turn on selected controllers from all configurations" Height="25" Width="150" Margin="5"/>
+                <Button Content="Controllers Off" x:Name="btnControllersOff" ToolTip="Turn off selected controllers from all configurations" Height="25" Width="150" Margin="5"/>
             </StackPanel>
         </StackPanel>
         <StackPanel Background="#eae4ee" x:Name="stackEdit" Margin="10" Orientation="Vertical">
@@ -1068,6 +1021,7 @@ $xmlController = @"
     </StackPanel>
     <StackPanel Margin="5" Background="#eae4ee" Orientation="Vertical">
         <Button Content="Add" x:Name="btnOk" IsDefault="True" ToolTip="Add controller to config" Height="30" Width="150" Margin="5"/>
+        <Button Content="Save" x:Name="btnSave" IsDefault="True" ToolTip="Save and Close the window" Height="30" Width="150" Margin="5"/>
         <Button Content="Cancel" x:Name="btnCancel" IsCancel="True" ToolTip="Cancel Operation" Height="30" Width="150" Margin="5"/>
         <Button Content="Add to Blacklist" x:Name="btnBlacklist" ToolTip="Add controller to Blacklist to prevent showing here" Height="30" Width="150" Margin="5"/>
     </StackPanel>
@@ -1429,12 +1383,32 @@ $btnStop.Add_Click({
 
 $btnAllOn = $Window.FindName('btnAllOn')
 $btnAllOn.Add_Click({
-    Switch-All -Joysticks $Joysticks -Options $Options -On -xml $xmlSplash
+    Switch-Controllers -Joysticks $Joysticks -Options $Options -On -xml $xmlSplash -all
 })
 
 $btnAllOff = $Window.FindName('btnAllOff')
 $btnAllOff.Add_Click({
-    Switch-All -Joysticks $Joysticks -Options $Options -Off
+    Switch-Controllers -Joysticks $Joysticks -Options $Options -Off -all
+})
+$btnControllersOn = $Window.FindName('btnControllersOn')
+$btnControllersOn.Add_Click({
+    $Game = $ComboGame.SelectedItem
+    Switch-Controllers -Joysticks $Joysticks -Options $Options -On -xml $xmlSplash -Game $Game
+})
+
+$btnControllersOff = $Window.FindName('btnControllersOff')
+$btnControllersOff.Add_Click({
+    $Game = $ComboGame.SelectedItem
+    Switch-Controllers -Joysticks $Joysticks -Options $Options -Off -Game $Game
+})
+
+$btnConfigureBlacklist = $Window.FindName('btnConfigureBlacklist')
+$btnConfigureBlacklist.Add_Click({
+    $BLUpdated = Get-Controller -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData -xml $xmlController -setup
+    IF ($BLUpdated -eq 'yes') {
+        $Script:Settings = Get-Content -Path "$SettingsPath" -Raw | ConvertFrom-Json
+        $Script:Joysticks = @(Get-Joysticks -xml $xmlSplashpnpDevice -Settings $Settings)
+    }
 })
 
 #Populate the file path textboxes using a file picker
@@ -1674,6 +1648,7 @@ $btnNewGame.Add_Click({
 
 $btnEditGame = $Window.FindName('btnEditGame')
 $btnEditGame.Add_Click({
+    $Script:Settings = Get-Content -Path "$SettingsPath" -Raw | ConvertFrom-Json
     IF ($ComboGame.text -ne " " -and $false -ne $ComboGame.text){
         #hide the combo box to prevent user from causing problems and show the edit fields
         $stackEdit.Visibility = "Visible"
