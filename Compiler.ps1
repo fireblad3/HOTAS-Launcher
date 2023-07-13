@@ -1,6 +1,6 @@
 $ScriptContent = Get-Content -Path ".\Launcher.ps1"
 $Copyright = "Copyright (C) 2023  Daniel Bailey"
-$Icon = ".\joystick-256x256.ico"
+$Icon = ".\Hotas-Launcher.ico"
 $Title = "HOTAS.Launcher"
 $FileName = ".\$Title.exe"
 foreach ($line in $ScriptContent) {
