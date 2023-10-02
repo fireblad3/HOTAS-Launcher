@@ -1,3 +1,4 @@
+# https://www.powershellgallery.com/packages/ps2exe/1.0.4
 $ScriptContent = Get-Content -Path ".\Launcher.ps1"
 $Copyright = "Copyright (C) 2023  Daniel Bailey"
 $Icon = ".\Hotas-Launcher.ico"

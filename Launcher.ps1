@@ -83,11 +83,12 @@ v1.0.6.0    Created a new Controllers menu.
             Moved the Clear Blacklist button into the controllers menu.
             Modified the Get-Controller function to facilitate the new blacklist flow.
             Fixed a bug where updating the blacklist did not occur until after you restarted the app.
+v1.0.7.0    Added more controller slots
 #>
 param(
 [switch]$Elevated
 )
-$version = "v1.0.6.0"
+$version = "v1.0.7.0"
 $Testing = $false
 IF ($Testing) {
     $style = "Normal"
@@ -166,6 +167,11 @@ Function Set-Config {
                 Stick8= $null
                 Stick9= $null
                 Stick10= $null
+                Stick11= $null
+                Stick12= $null
+                Stick13= $null
+                Stick14= $null
+                Stick15= $null
             }
         }
 
@@ -991,6 +997,31 @@ $xmlMain = @"
                         <Label x:Name="lblJoy10" Width="300" Height="25" Padding="3" Margin="5" Background="white"/>
                         <Button x:Name="btnJoy10" Content="Select" ToolTip="Browse to select Controller 10" Height="25" Width="100" Margin="5"/>
                     </StackPanel>
+                    <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Label Width="75" Height="25" Padding="3" Margin="5">Controller 1</Label>
+                        <Label x:Name="lblJoy11" Width="300" Height="25" Padding="3" Margin="5" Background="white" />
+                        <Button x:Name="btnJoy11" Content="Select" ToolTip="Browse to select Controller 11" Height="25" Width="100" Margin="5"/>
+                    </StackPanel>
+                    <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Label Width="75" Height="25" Padding="3" Margin="5">Controller 12</Label>
+                        <Label x:Name="lblJoy12" Width="300" Height="25" Padding="3" Margin="5" Background="white" />
+                        <Button x:Name="btnJoy12" Content="Select" ToolTip="Browse to select Controller 12" Height="25" Width="100" Margin="5"/>
+                    </StackPanel>
+                    <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Label Width="75" Height="25" Padding="3" Margin="5">Controller 13</Label>
+                        <Label x:Name="lblJoy13" Width="300" Height="25" Padding="3" Margin="5" Background="white" />
+                        <Button x:Name="btnJoy13" Content="Select" ToolTip="Browse to select Controller 13" Height="25" Width="100" Margin="5"/>
+                    </StackPanel>
+                    <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Label Width="75" Height="25" Padding="3" Margin="5">Controller 14</Label>
+                        <Label x:Name="lblJoy14" Width="300" Height="25" Padding="3" Margin="5" Background="white" />
+                        <Button x:Name="btnJoy14" Content="Select" ToolTip="Browse to select Controller 14" Height="25" Width="100" Margin="5"/>
+                    </StackPanel>
+                    <StackPanel Margin="5" Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Label Width="75" Height="25" Padding="3" Margin="5">Controller 15</Label>
+                        <Label x:Name="lblJoy15" Width="300" Height="25" Padding="3" Margin="5" Background="white" />
+                        <Button x:Name="btnJoy15" Content="Select" ToolTip="Browse to select Controller 15" Height="25" Width="100" Margin="5"/>
+                    </StackPanel>
                 </StackPanel>
             </StackPanel>
             <StackPanel Background="#66ffcc">
@@ -1301,6 +1332,11 @@ $lblJoy7 = $Window.FindName('lblJoy7')
 $lblJoy8 = $Window.FindName('lblJoy8')
 $lblJoy9 = $Window.FindName('lblJoy9')
 $lblJoy10 = $Window.FindName('lblJoy10')
+$lblJoy11 = $Window.FindName('lblJoy11')
+$lblJoy12 = $Window.FindName('lblJoy12')
+$lblJoy13 = $Window.FindName('lblJoy13')
+$lblJoy14 = $Window.FindName('lblJoy14')
+$lblJoy15 = $Window.FindName('lblJoy15')
 $txtGameArgs = $Window.FindName('txtGameArgs')
 
 #Assign bindings for some buttons and click actions for them
@@ -1522,6 +1558,36 @@ $btnJoy10.Add_Click({
         $lblJoy10.Content = $result
 })
 
+$btnJoy11 = $Window.FindName('btnJoy11')
+$btnJoy11.Add_Click({
+        $result = Get-Controller -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData -xml $xmlController
+        $lblJoy11.Content = $result
+})
+
+$btnJoy12 = $Window.FindName('btnJoy12')
+$btnJoy12.Add_Click({
+        $result = Get-Controller -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData -xml $xmlController
+        $lblJoy12.Content = $result
+})
+
+$btnJoy13 = $Window.FindName('btnJoy13')
+$btnJoy13.Add_Click({
+        $result = Get-Controller -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData -xml $xmlController
+        $lblJoy13.Content = $result
+})
+
+$btnJoy14 = $Window.FindName('btnJoy14')
+$btnJoy14.Add_Click({
+        $result = Get-Controller -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData -xml $xmlController
+        $lblJoy14.Content = $result
+})
+
+$btnJoy15 = $Window.FindName('btnJoy15')
+$btnJoy15.Add_Click({
+        $result = Get-Controller -Joysticks $Joysticks -Settings $Settings -MyAppData $MyAppData -xml $xmlController
+        $lblJoy15.Content = $result
+})
+
 $btnSaveGame = $Window.FindName('btnSaveGame')
 $btnSaveGame.Add_Click({
     
@@ -1571,6 +1637,11 @@ $btnSaveGame.Add_Click({
                 Stick8=$lblJoy8.Content
                 Stick9=$lblJoy9.Content
                 Stick10=$lblJoy10.Content
+                Stick11=$lblJoy11.Content
+                Stick12=$lblJoy12.Content
+                Stick13=$lblJoy13.Content
+                Stick14=$lblJoy14.Content
+                Stick15=$lblJoy15.Content
             }
         }
         #Add the object to $Options and overwrite if it already exists
@@ -1644,6 +1715,11 @@ $btnNewGame.Add_Click({
     $lblJoy8.Content = $Options.$Game.Selections.Stick8
     $lblJoy9.Content = $Options.$Game.Selections.Stick9
     $lblJoy10.Content = $Options.$Game.Selections.Stick10
+    $lblJoy11.Content = $Options.$Game.Selections.Stick11
+    $lblJoy12.Content = $Options.$Game.Selections.Stick12
+    $lblJoy13.Content = $Options.$Game.Selections.Stick13
+    $lblJoy14.Content = $Options.$Game.Selections.Stick14
+    $lblJoy15.Content = $Options.$Game.Selections.Stick15
 })
 
 $btnEditGame = $Window.FindName('btnEditGame')
@@ -1691,6 +1767,11 @@ $btnEditGame.Add_Click({
         $lblJoy8.Content = $Options.$Game.Selections.Stick8
         $lblJoy9.Content = $Options.$Game.Selections.Stick9
         $lblJoy10.Content = $Options.$Game.Selections.Stick10
+        $lblJoy11.Content = $Options.$Game.Selections.Stick11
+        $lblJoy12.Content = $Options.$Game.Selections.Stick12
+        $lblJoy13.Content = $Options.$Game.Selections.Stick13
+        $lblJoy14.Content = $Options.$Game.Selections.Stick14
+        $lblJoy15.Content = $Options.$Game.Selections.Stick15
     } Else {
         Show-Message -Message "It appears you have not selected a Config, if you wish to create a new game, please click `"New Config`"."
     }
