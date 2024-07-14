@@ -84,11 +84,12 @@ v1.0.6.0    Created a new Controllers menu.
             Modified the Get-Controller function to facilitate the new blacklist flow.
             Fixed a bug where updating the blacklist did not occur until after you restarted the app.
 v1.0.7.0    Added more controller slots
+v1.0.7.1    Added a check to see if the game path is blank and if it is just skip over launching the game itself.
 #>
 param(
 [switch]$Elevated
 )
-$version = "v1.0.7.0"
+$version = "v1.0.7.1"
 $Testing = $false
 IF ($Testing) {
     $style = "Normal"
@@ -645,18 +646,20 @@ Function Start-Game {
                 }
                 Write-Host "Starting $Game"
                 $GamePath = $Options.$Game.GamePath
-                $GameParent = Split-Path $GamePath -Parent
-                IF ($Options.$Game.arg1) {
-                    If ($Options.$Game.GameAsAdmin.IsChecked -eq $true){
-                        Start-Process -WorkingDirectory $GameParent -FilePath $GamePath -ArgumentList $Options.$Game.Arg1
+                IF ($GamePath.Length -gt 4) { # Only try to launch the game if it has a path...
+                    $GameParent = Split-Path $GamePath -Parent
+                    IF ($Options.$Game.arg1) {
+                        If ($Options.$Game.GameAsAdmin.IsChecked -eq $true){
+                            Start-Process -WorkingDirectory $GameParent -FilePath $GamePath -ArgumentList $Options.$Game.Arg1
+                        } Else {
+                            Start-Process -WorkingDirectory $GameParent -FilePath $GamePath -ArgumentList $Options.$Game.Arg1 -Credential $Creds
+                        }
                     } Else {
-                        Start-Process -WorkingDirectory $GameParent -FilePath $GamePath -ArgumentList $Options.$Game.Arg1 -Credential $Creds
-                    }
-                } Else {
-                    If ($Options.$Game.GameAsAdmin.IsChecked -eq $true){
-                        Start-Process -WorkingDirectory $GameParent -FilePath $GamePath
-                    } Else {
-                        Start-Process -WorkingDirectory $GameParent -FilePath $GamePath -Credential $Creds
+                        If ($Options.$Game.GameAsAdmin.IsChecked -eq $true){
+                            Start-Process -WorkingDirectory $GameParent -FilePath $GamePath
+                        } Else {
+                            Start-Process -WorkingDirectory $GameParent -FilePath $GamePath -Credential $Creds
+                        }
                     }
                 }
                 $Splash.Close()
@@ -779,17 +782,17 @@ Function Switch-Controllers {
     $Controllers = $Controllers | Sort-Object -Unique
 
     IF ($On) {
-        $Splash = Import-Xaml -xvar $xml
-        $Splash.Add_ContentRendered({
+        #$Splash = Import-Xaml -xvar $xml
+        #$Splash.Add_ContentRendered({
             ForEach ($Selection in $Controllers) {
                 $Stick = $Joysticks | Where-Object {$_.Name -eq $Selection}
                 $SelectedStick = $Stick.ID
                 Start-Process -FilePath $Path -ArgumentList "/RunAsAdmin /enable $SelectedStick"
                 Timeout /T 5
             }
-            $Splash.Close()
-        })
-        $Splash.ShowDialog() | Out-Null
+            #$Splash.Close()
+        #})
+        #$Splash.ShowDialog() | Out-Null
     }
     IF ($Off) {
         ForEach ($Selection in $Controllers) {
@@ -1033,6 +1036,7 @@ $xmlMain = @"
         </StackPanel>
         <StackPanel Margin="0" VerticalAlignment="Bottom" HorizontalAlignment="Left">
             <Label Width="200" Height="25" Padding="3" Margin="5">Copyright, Daniel Bailey 2023</Label>
+            <Label x:Name="lblVersion" Width="200" Height="25" Padding="3" />
         </StackPanel>
     </StackPanel>
 </Window>
@@ -1277,6 +1281,9 @@ $ComboGame.ItemsSource = $Games
 IF ($Games -contains $LastGame) {
     $ComboGame.SelectedItem = $LastGame
 }
+#Make a Label and bind to $Version
+$lblVersion = $Window.FindName('lblVersion')
+$lblVersion.Content = $Version
 #Make a File Menu Item for Update Check
 $chkVersion = $Window.FindName('chkVersion')
 $chkVersion.IsChecked = $Settings.updatecheck
