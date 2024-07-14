@@ -85,6 +85,7 @@ v1.0.6.0    Created a new Controllers menu.
             Fixed a bug where updating the blacklist did not occur until after you restarted the app.
 v1.0.7.0    Added more controller slots
 v1.0.7.1    Added a check to see if the game path is blank and if it is just skip over launching the game itself.
+            Added a version number to the bottom corner of the main window.
 #>
 param(
 [switch]$Elevated
