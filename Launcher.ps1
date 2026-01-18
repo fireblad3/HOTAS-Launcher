@@ -86,11 +86,12 @@ v1.0.6.0    Created a new Controllers menu.
 v1.0.7.0    Added more controller slots
 v1.0.7.1    Added a check to see if the game path is blank and if it is just skip over launching the game itself.
             Added a version number to the bottom corner of the main window.
+v1.0.7.2    Added switch -UseBasicParsing to any Invoke-WebRequest command to prevent scripts being run from the web page if something nefarious was to happen to git hub. Prompted to do this by a windows Security warning reported by Vince.
 #>
 param(
 [switch]$Elevated
 )
-$version = "v1.0.7.1"
+$version = "v1.0.7.2"
 $Testing = $false
 IF ($Testing) {
     $style = "Normal"
@@ -199,7 +200,7 @@ Function Get-USBdview {
         IF ($download -eq 'Yes') {
             Try {
                 $url = "https://www.nirsoft.net/utils/usbdeview-x64.zip"
-                Invoke-WebRequest $url -OutFile $MyAppData\usbdeview-x64.zip
+                Invoke-WebRequest $url -OutFile $MyAppData\usbdeview-x64.zip -UseBasicParsing
                 Expand-Archive -Path $MyAppData\usbdeview-x64.zip -DestinationPath $MyAppData\usbdeview-x64 -Force
                 Remove-Item -Path $MyAppData\usbdeview-x64.zip
                 
@@ -1223,7 +1224,7 @@ IF (!(Test-Path -Path $path)){
 #Check if we have the latest version of HOTAS Launcher
 IF ($Settings.updatecheck) {
     Try {
-        $latestRelease = Invoke-WebRequest https://api.github.com/repos/fireblad3/HOTAS-Launcher/releases -Headers @{"Accept"="application/json"}
+        $latestRelease = Invoke-WebRequest https://api.github.com/repos/fireblad3/HOTAS-Launcher/releases -Headers @{"Accept"="application/json"} -UseBasicParsing
         $json = $latestRelease.Content | ConvertFrom-Json
         $Versions = [PSCustomObject]@{
             Version = $json.tag_name
